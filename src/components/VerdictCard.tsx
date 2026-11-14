@@ -1,5 +1,6 @@
 import { pText, signed } from "../lib/format";
 import type { Region, VariableResult } from "../lib/types";
+import { ChartCard } from "./DashCards";
 
 interface Props {
   r: VariableResult;
@@ -15,76 +16,65 @@ function detectText(r: VariableResult): string | null {
   return "기울기가 0에 가까워 탐지 가능 연수를 추정할 수 없음";
 }
 
-// 검정 상세: 핵심 숫자(위 KPI 줄) 뒤의 근거와 주의 사항.
+// 검정 상세: Figma 차트 카드 뼈대. 기준값이 여러 개면 Tabs 줄로 고름.
 export default function VerdictCard({ r, onThreshold }: Props) {
   const st = r.stats;
   const unit = r.variable.unit;
   const det = detectText(r);
   const v = r.variable;
+  const opts = v.threshold_options.length > 1 ? v.threshold_options : null;
 
   return (
-    <section className="card verdict">
-      <h3 className="sec-title">검정 상세</h3>
-      <dl>
+    <ChartCard
+      meta="통계 검정"
+      title="검정 상세"
+      sub="p값: 추세가 없다고 가정할 때 이 정도 변화가 우연히 나올 확률"
+      tabs={opts?.map((o) => ({ id: String(o), label: `기준 ${o}${v.threshold_unit}` }))}
+      tab={String(r.threshold)}
+      onTab={(id) => onThreshold(Number(id))}
+    >
+      <dl className="vd">
         <dt>기울기 방법</dt>
         <dd>{st.method === "sen" ? "Sen (튀는 해에 덜 흔들림)" : "OLS 최소제곱"}</dd>
         <dt>Sen 기울기</dt>
-        <dd>
+        <dd className="num">
           {signed(st.sen.slope_per_decade)}
           {unit} / 10년
         </dd>
         <dt>OLS 기울기</dt>
-        <dd>
+        <dd className="num">
           {signed(st.ols.slope_per_decade)}
           {unit} / 10년
         </dd>
         <dt>Mann-Kendall</dt>
-        <dd>
+        <dd className="num">
           {pText(st.mk.p)} (tau {st.mk.tau.toFixed(2)})
         </dd>
         <dt>t-검정 (기울기≠0)</dt>
-        <dd>{pText(st.ols.p)}</dd>
+        <dd className="num">{pText(st.ols.p)}</dd>
         <dt>자기상관 보정 t-검정</dt>
-        <dd>{pText(st.ols.p_ar1)}</dd>
+        <dd className="num">{pText(st.ols.p_ar1)}</dd>
         <dt>연수</dt>
-        <dd>{st.n}년</dd>
+        <dd className="num">{st.n}년</dd>
       </dl>
-      <p className="muted small">p값: 추세가 없다고 가정할 때 이 정도 변화가 우연히 나올 확률</p>
 
-      {det && <div className="flag info">{det}</div>}
-      {st.flags.includes("tests_disagree") && <div className="flag">t-검정과 Mann-Kendall 결과 불일치. 일부 연도의 큰 값이 기울기에 영향을 줬을 수 있음.</div>}
+      {det && <p className="flag info">{det}</p>}
+      {st.flags.includes("tests_disagree") && <p className="flag">t-검정과 Mann-Kendall 결과 불일치. 일부 연도의 큰 값이 기울기에 영향을 줬을 수 있음.</p>}
       {st.flags.includes("one_year_drives_result") && (
-        <div className="flag">
+        <p className="flag">
           최대 이상치 {st.leave_out.year}년 제외 시 판정: '{st.leave_out.verdict.label}'. 한 해가 결과를 좌우함.
-        </div>
+        </p>
       )}
-      {!st.flags.includes("one_year_drives_result") && st.verdict.status === "significant" && (
-        <div className="flag info">최대 이상치 {st.leave_out.year}년 제외 시에도 판정 동일.</div>
-      )}
-      {st.flags.includes("autocorrelation_weakens") && (
-        <div className="flag">자기상관 보정 시 t-검정 {pText(st.ols.p_ar1)} (유의성 약해짐).</div>
-      )}
-
-      {v.threshold_options.length > 1 && (
-        <div className="threshold-row">
-          <span className="muted">기준값</span>
-          {v.threshold_options.map((o) => (
-            <button key={o} className="chip" aria-pressed={r.threshold === o} onClick={() => onThreshold(o)}>
-              {o}
-              {v.threshold_unit}
-            </button>
-          ))}
-        </div>
-      )}
-
+      {!st.flags.includes("one_year_drives_result") && st.verdict.status === "significant" && <p className="flag info">최대 이상치 {st.leave_out.year}년 제외 시에도 판정 동일.</p>}
+      {st.flags.includes("autocorrelation_weakens") && <p className="flag">자기상관 보정 시 t-검정 {pText(st.ols.p_ar1)} (유의성 약해짐).</p>}
       {r.overlay && (
-        <div className="flag info">
+        <p className="flag info">
           {r.overlay.label}와의 상관:{" "}
           {r.overlay.correlation
             ? `r = ${r.overlay.correlation.r.toFixed(2)} (${pText(r.overlay.correlation.p)}, ${r.overlay.correlation.n}개 연도)`
             : `겹치는 연도가 ${r.overlay.common_years}개라 계산하지 않음`}
           . {r.overlay.note}
-        </div>
+        </p>
       )}
       {r.notes.length > 0 && (
         <ul className="notes muted small">
@@ -93,6 +83,6 @@ export default function VerdictCard({ r, onThreshold }: Props) {
           ))}
         </ul>
       )}
-    </section>
+    </ChartCard>
   );
 }

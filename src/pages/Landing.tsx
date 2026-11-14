@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { CardHead, StreamBand } from "../components/DashCards";
+import { ChartCard, HeatmapGrid } from "../components/DashCards";
 import Icon from "../components/Icon";
 import { toSearch, useSelection } from "../lib/selection";
 
@@ -58,41 +58,10 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="card hero-card" aria-label="분석 결과 미리 보기">
-          <CardHead title="로그 밸리 수확기 연기 노출일수">
-            <span className="demo-flag">예시</span>
-          </CardHead>
-          <dl className="trio">
-            <div>
-              <dt>초기 평균</dt>
-              <dd className="num">
-                3.6<small>일</small>
-              </dd>
-            </div>
-            <div>
-              <dt>최근 평균</dt>
-              <dd className="num">
-                9.5<small>일</small>
-              </dd>
-            </div>
-            <div>
-              <dt>10년당 변화</dt>
-              <dd className="num">
-                +4.0<small>일</small>
-              </dd>
-            </div>
-          </dl>
-          <StreamBand
-            values={PREVIEW}
-            higherIs="worse"
-            height={200}
-            marks={[
-              { at: 0.2, top: "3.6", bottom: "2003–12" },
-              { at: 0.5, top: "6.4", bottom: "전체 평균" },
-              { at: 0.8, top: "9.5", bottom: "2016–25" },
-            ]}
-          />
-        </div>
+        {/* 미리 보기: Figma 차트 카드 + Heatmap 컴포넌트 그대로 */}
+        <ChartCard className="hero-card" meta="예시 데이터" title="로그 밸리 수확기 연기 노출일수" value="+4.0일 / 10년" sub="2003–2025, 증가·유의함 (Mann-Kendall p < 0.001)">
+          <HeatmapGrid values={PREVIEW} higherIs="worse" unit="일" />
+        </ChartCard>
       </section>
 
       <section className="how" aria-label="이용 순서">

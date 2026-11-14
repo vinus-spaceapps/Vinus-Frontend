@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
-import Icon from "./components/Icon";
+import Icon, { type IconName } from "./components/Icon";
 import { useCatalog } from "./lib/catalog";
 import { toSearch, useSelection } from "./lib/selection";
 import Landing from "./pages/Landing";
@@ -18,11 +18,12 @@ function Rail() {
   const cur = STEP_PATHS.indexOf(pathname);
   const canAnalyze = sel.basket.length > 0 && !!sel.region;
   const steps = [
-    { to: "/variables", label: "변수", enabled: true },
-    { to: "/region", label: "지역·기간", enabled: sel.basket.length > 0 },
+    { to: "/variables", label: "변수", icon: "layers" as IconName, enabled: true },
+    { to: "/region", label: "지역·기간", icon: "pin" as IconName, enabled: sel.basket.length > 0 },
     {
       to: canAnalyze ? `/analyze${toSearch({ variables: sel.basket, region: sel.region!, start: sel.start, end: sel.end, thresholds: {} })}` : "/analyze",
       label: "결과",
+      icon: "chart" as IconName,
       enabled: pathname === "/analyze" || canAnalyze,
     },
   ];
@@ -33,7 +34,7 @@ function Rail() {
       </Link>
       <Link to="/" className="rail-home" {...(pathname === "/" ? { "aria-current": "page" } : {})}>
         <span className="rail-home-ic">
-          <Icon name="home" size={18} />
+          <Icon name="home" size={22} />
         </span>
         <span className="step-label">처음</span>
       </Link>
@@ -41,7 +42,8 @@ function Rail() {
         <ol>
           {steps.map((s, i) => {
             const state = i === cur ? "current" : i < cur ? "done" : s.enabled ? "open" : "locked";
-            const mark = state === "done" ? <Icon name="check" size={16} /> : <span className="num">{i + 1}</span>;
+            // Figma Collapsed Nav 처럼 아이콘(24). 지나온 단계는 체크, 이름표에 순서 번호
+            const mark = <Icon name={state === "done" ? "check" : s.icon} size={22} />;
             return (
               <li key={s.label} data-state={state} {...(i < cur ? { "data-reached": "" } : {})}>
                 {s.enabled ? (
@@ -54,7 +56,7 @@ function Rail() {
                   </span>
                 )}
                 <span className="step-label" aria-hidden>
-                  {s.label}
+                  {i + 1} {s.label}
                 </span>
               </li>
             );

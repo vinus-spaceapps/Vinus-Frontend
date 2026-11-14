@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import InsightPanel from "../components/InsightPanel";
-import { CardHead, FlowCard, KpiRow, RegionBarsCard, TrendCard } from "../components/DashCards";
+import { ChartCard, DoughnutCard, HeatmapCard, KpiRow, Level2Card, TrendCard } from "../components/DashCards";
 import Icon from "../components/Icon";
 import RegionMap from "../components/RegionMap";
 import VerdictCard from "../components/VerdictCard";
@@ -217,12 +217,13 @@ export default function Analysis() {
 
               <div className="row-wide">
                 <TrendCard r={shown} region={data.region} />
-                <RegionBarsCard r={shown} region={data.region} onRegion={(id) => update({ region: id })} />
+                <Level2Card r={shown} region={data.region} onRegion={(id) => update({ region: id })} />
               </div>
 
               <div className="row-three">
-                <section className="card dash-card">
-                  <CardHead title="산지 지도" sub="산지를 누르면 그 산지로 전환" />
+                <HeatmapCard r={shown} />
+                <DoughnutCard r={shown} />
+                <ChartCard meta="같은 변수·기간" title="산지 지도" sub="점을 누르면 그 산지로">
                   <div className="map-frame">
                     <RegionMap
                       regions={regions}
@@ -233,13 +234,12 @@ export default function Analysis() {
                       higherIs={shown.variable.higher_is}
                     />
                   </div>
-                </section>
-                <FlowCard r={shown} />
-                <VerdictCard r={shown} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
+                </ChartCard>
               </div>
 
-              <section className="card upload-card">
-                <CardHead title="내 기록 겹치기" sub="연도,값 형식 CSV. 예: 수확량, 서리 피해율. 상관관계는 인과관계가 아님." />
+              <div className="row-two">
+              <VerdictCard r={shown} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
+              <ChartCard meta="선택" title="내 기록 겹치기" sub="연도,값 형식 CSV (예: 수확량, 서리 피해율). 상관관계는 인과관계가 아님.">
                 <div className="upload-row">
                   <label className="field">
                     <span className="muted small">이름</span>
@@ -288,7 +288,8 @@ export default function Analysis() {
                 <p className="card-note">
                   {data.region.blurb} {data.resolution_note}
                 </p>
-              </section>
+              </ChartCard>
+              </div>
             </div>
           )}
         </div>

@@ -7,6 +7,7 @@ export function useTokens() {
     const g = (n: string) => s.getPropertyValue(n).trim();
     return {
       text: g("--fg"),
+      ink: g("--ink"),
       card: g("--card-solid"),
       muted: g("--muted"),
       line2: g("--line-2"),
