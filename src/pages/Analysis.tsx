@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import InsightPanel from "../components/InsightPanel";
+import { Card, DoughnutCard, HeatmapCard, KpiRow, RegionBarsCard, TrendCard, ValidationCard } from "../components/DashCards";
+import Icon from "../components/Icon";
 import RegionMap from "../components/RegionMap";
-import TrendChart from "../components/TrendChart";
+import Stripes from "../components/Stripes";
 import VerdictCard from "../components/VerdictCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
 import { wideScreen } from "../lib/format";
-import { BASKET_LIMIT, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
+import { BASKET_LIMIT, DATA_START, DEFAULT_END, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
 import type { AnalysisResponse, AnalyzeQuery, NextStepChange, YearValue } from "../lib/types";
 
-const YEARS = Array.from({ length: 2025 - 1981 + 1 }, (_, i) => 1981 + i);
+const YEARS = Array.from({ length: DEFAULT_END - DATA_START + 1 }, (_, i) => DATA_START + i);
 
 function parseCsv(text: string): YearValue[] {
   const out: YearValue[] = [];
@@ -23,10 +25,12 @@ function parseCsv(text: string): YearValue[] {
   return out;
 }
 
+// 결과 화면: Starwave 에피소드 상세 구성 (행성 띠 머리 → 위에 붙는 바 → 판정 문장 → 핵심 숫자 → 자료 칸들 → 다른 산지 링크).
+// 인사이트 AI(RAG)는 오른쪽 사이드바.
 export default function Analysis() {
   const { search } = useLocation();
   const nav = useNavigate();
-  const { variables, regions, health } = useCatalog();
+  const { variables, families, categories, regions, health } = useCatalog();
   const { sel, set } = useSelection();
   const params = useMemo(() => fromSearch(search), [search]);
 
@@ -34,10 +38,13 @@ export default function Analysis() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [panel, setPanel] = useState(wideScreen);
-  const [mapVar, setMapVar] = useState<string | null>(null);
+  const [active, setActive] = useState<string | null>(null);
   const [userSeries, setUserSeries] = useState<YearValue[] | null>(null);
   const [userLabel, setUserLabel] = useState("내 기록");
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const openBtn = useRef<HTMLButtonElement>(null);
 
   const stages = useMemo(() => {
     const s = Object.fromEntries(Object.entries(sel.stages).filter(([, v]) => /^\d{2}-\d{2}$/.test(v ?? "")));
@@ -89,181 +96,253 @@ export default function Analysis() {
     else if (change.type === "region") update({ region: change.value });
     else if (change.type === "start_year") update({ start: change.value });
     else if (change.type === "add_variable") {
-      if (params.variables.includes(change.value)) return setNotice("이미 분석 중인 변수예요. 아래 그래프를 보세요.");
+      if (params.variables.includes(change.value)) return setNotice("이미 분석 중인 변수입니다.");
       if (params.variables.length < BASKET_LIMIT) update({ variables: [...params.variables, change.value] });
       else {
         // 가득 차면 지금 인사이트를 보는 변수는 남기고 다른 하나를 바꿔 넣습니다.
         const drop = params.variables.find((x) => x !== varId);
         update({ variables: [...params.variables.filter((v) => v !== drop), change.value] });
-        setNotice("바구니가 가득 차서 변수 하나를 바꿔 넣었어요.");
+        setNotice(`변수는 최대 ${BASKET_LIMIT}개라 하나를 교체했습니다.`);
       }
     }
   };
 
   const addable = variables.filter((v) => !params.variables.includes(v.id));
-  const shownMapVar = data?.results.find((r) => r.variable.id === mapVar) ?? data?.results[0];
+  const shown = data?.results.find((r) => r.variable.id === active) ?? data?.results[0];
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     const pts = parseCsv(await f.text());
-    if (pts.length < 4) setNotice("CSV에서 (연도, 값) 4줄 이상을 찾지 못했어요. 예: 2015,3.2");
+    if (pts.length < 4) setNotice("연도,값 형식의 행이 4개 이상 필요합니다. 예: 2015,3.2");
     else {
       setUserSeries(pts);
+      setFileName(f.name);
       setNotice(null);
     }
   };
 
+  const regionName = data?.region.name ?? regions.find((r) => r.id === params.region)?.name ?? "분석 결과";
+  const catName = shown ? categories.find((c) => c.id === shown.variable.category)?.name : null;
+  // 맨 아래 '다른 산지' 링크: 목록에서 다음 산지
+  const ri = regions.findIndex((r) => r.id === params.region);
+  const nextRegion = regions.length > 1 ? regions[(ri + 1) % regions.length] : null;
+
   return (
-    <main className="container page">
-      <div className={`with-panel ${panel ? "open" : ""}`}>
-        <section>
-          <div className="card summary-bar">
-            <div className="grp">
-              {params.variables.map((id) => (
-                <span className="chip" key={id}>
-                  {variables.find((v) => v.id === id)?.name ?? id}
+    <main>
+      {/* 머리: 지금 보는 지표의 기후 줄무늬(한 줄 = 한 해, 밝을수록 값이 큰 해) 위에 큰 제목 + 오른쪽 흰 버튼 */}
+      <header className="ep-hero">
+        {shown && <Stripes values={shown.series.map((p) => p.value)} className="ep-stripes" />}
+        {shown && (
+          <p className="stripes-note">
+            배경 줄무늬: {shown.variable.name}, {shown.start}–{shown.end}. 밝을수록 값이 큰 해.
+          </p>
+        )}
+        <div className="wrap ep-hero-in">
+          <div>
+            <p className="label">{data?.region.country ?? "분석 결과"}</p>
+            <h1>
+              {regionName}
+              {shown && (
+                <>
+                  <br />
+                  {shown.variable.name}
+                </>
+              )}
+            </h1>
+          </div>
+          <button ref={openBtn} className="btn primary" aria-pressed={panel} onClick={() => setPanel((p) => !p)}>
+            <Icon name="comment" size={16} />
+            {panel ? "AI 해설 닫기" : "AI 해설"}
+          </button>
+        </div>
+      </header>
+
+      {/* 위에 붙는 바: 볼 변수 칩 + 산지·기간 */}
+      <div className="sticky-bar">
+        <div className="wrap sticky-in">
+          <div className="chips" role="group" aria-label="볼 변수">
+            {params.variables.map((id) => {
+              const name = variables.find((v) => v.id === id)?.name ?? id;
+              const on = shown ? shown.variable.id === id : id === params.variables[0];
+              return (
+                <span key={id} className="tab-chip" {...(on ? { "data-on": "" } : {})}>
+                  <button onClick={() => setActive(id)} aria-pressed={on}>
+                    {name}
+                  </button>
                   {params.variables.length > 1 && (
-                    <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
-                      ×
+                    <button className="x" onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label={`${name} 빼기`}>
+                      <Icon name="close" size={14} />
                     </button>
                   )}
                 </span>
-              ))}
-              {params.variables.length < BASKET_LIMIT && (
-                <select className="chip-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
-                  <option value="">+ 변수</option>
-                  {addable.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <span className="sep" />
-            <select className="chip-select" value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
+              );
+            })}
+            {params.variables.length < BASKET_LIMIT && (
+              <select className="tab-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
+                <option value="">+ 변수</option>
+                {families.map((f) => (
+                  <optgroup key={f.id} label={f.name}>
+                    {addable
+                      .filter((v) => v.family === f.id)
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+            )}
+          </div>
+          <span className="spacer" />
+          {loading && <span className="spinner" aria-label="계산 중" />}
+          <label className="input sm">
+            <Icon name="pin" size={16} />
+            <select value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
               {regions.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
               ))}
             </select>
-            <span className="sep" />
-            <div className="grp">
-              <select className="chip-select" value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
-                {YEARS.map((y) => (
-                  <option key={y}>{y}</option>
-                ))}
-              </select>
-              ~
-              <select className="chip-select" value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
-                {YEARS.map((y) => (
-                  <option key={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            {loading && <span className="spinner" />}
-            {data?.is_mock && (
-              <span className="badge badge-mock" style={{ marginLeft: "auto" }}>
-                예시 데이터 · 실제 관측 아님
-              </span>
-            )}
-          </div>
-
-          {error && (
-            <div className="error-box" style={{ marginBottom: 16 }}>
-              {error}
-            </div>
-          )}
-          {notice && (
-            <div className="flag" style={{ marginBottom: 16 }}>
-              {notice}
-            </div>
-          )}
-
-          {data && (
-            <>
-              <div className="analysis-top">
-                <div className="card analysis-map">
-                  <RegionMap regions={regions} selected={data.region.id} onSelect={(id) => update({ region: id })} comparison={shownMapVar?.regions} unit={shownMapVar?.variable.unit} />
-                </div>
-                <div className="card" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <h3 style={{ fontSize: 17 }}>
-                    {data.region.name} <span className="muted small">{data.region.country}</span>
-                  </h3>
-                  <p className="muted small">{data.region.blurb}</p>
-                  {data.results.length > 1 && (
-                    <label className="small">
-                      지도 색 기준{" "}
-                      <select className="chip-select" value={shownMapVar?.variable.id} onChange={(e) => setMapVar(e.target.value)}>
-                        {data.results.map((r) => (
-                          <option key={r.variable.id} value={r.variable.id}>
-                            {r.variable.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <p className="small">
-                    지도는 같은 변수·기간으로 다른 산지도 계산해 추세 방향을 색으로 보여 줘요. 마커를 누르면 그 산지로 바뀝니다.
-                  </p>
-                  {shownMapVar && (
-                    <p className="muted small">
-                      7개 산지를 함께 비교하므로 다중검정 보정(FDR) q값도 계산했어요: 이 산지 q = {shownMapVar.regions.find((c) => c.region_id === data.region.id)?.q_mk.toFixed(3)}
-                    </p>
-                  )}
-                  <div className="note-line">{data.resolution_note}</div>
-                </div>
-              </div>
-
-              {data.results.map((r) => (
-                <div key={r.variable.id} className="result-block">
-                  <div className="card chart-card">
-                    <div className="chart-head">
-                      <h3>
-                        {r.variable.name} <span className="muted small">({r.variable.unit}, {r.variable.stage})</span>
-                      </h3>
-                      <span className="muted small">
-                        {r.variable.dataset} · {r.variable.resolution}
-                      </span>
-                    </div>
-                    <TrendChart r={r} />
-                  </div>
-                  <VerdictCard r={r} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [r.variable.id]: v } })} />
-                </div>
+          </label>
+          <label className="input sm">
+            <Icon name="calendar" size={16} />
+            <select value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
+              {YEARS.map((y) => (
+                <option key={y}>{y}</option>
               ))}
+            </select>
+            <span className="muted">–</span>
+            <select value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
+              {YEARS.map((y) => (
+                <option key={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
 
-              <div className="card upload-row">
-                <b>(선택) 내 기록 겹치기</b>
-                <span className="muted">연도,값 형식 CSV (예: 수확량, 서리 피해율)</span>
-                <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} aria-label="내 기록 이름" />
-                <input type="file" accept=".csv,text/csv,text/plain" onChange={(e) => onFile(e.target.files?.[0])} />
-                {userSeries && (
-                  <button className="btn btn-ghost btn-sm" onClick={() => setUserSeries(null)}>
-                    겹치기 끄기 ({userSeries.length}개 연도)
-                  </button>
-                )}
-                <span className="muted small">상관은 인과가 아닙니다.</span>
-              </div>
-            </>
+      <div className={`wrap with-panel ${panel ? "open" : ""}`}>
+        <div className="an-main">
+          {error && <div className="error-box block-gap">{error}</div>}
+          {notice && <div className="flag block-gap">{notice}</div>}
+          {!data && !error && (
+            <div className="empty">
+              <span className="spinner" /> 계산 중
+            </div>
           )}
-        </section>
 
-        {panel && query && data && (
-          <InsightPanel
-            query={query}
-            vars={data.results.map((r) => ({ id: r.variable.id, name: r.variable.name }))}
-            aiEnabled={!!health?.ai.enabled}
-            onApply={apply}
-            onClose={() => setPanel(false)}
-          />
+          {data && shown && (
+            <div className="results" aria-busy={loading} {...(loading ? { "data-stale": "" } : {})}>
+              {/* 에피소드 소개 칸: 태그·기간 + 판정 문장 */}
+              <section className="statement">
+                <div className="meta">
+                  {catName && <span className="tag">{catName}</span>}
+                  <span className="num">
+                    {shown.start}–{shown.end}
+                  </span>
+                  <span className="num">{shown.stats.n}년</span>
+                  <span>{shown.variable.dataset}</span>
+                  {shown.is_mock && <span className="tag warn">예시 데이터</span>}
+                </div>
+                <p>{shown.verdict_text}</p>
+              </section>
+
+              <KpiRow r={shown} />
+
+              <div className="dash">
+                <TrendCard r={shown} region={data.region} />
+                <VerdictCard r={shown} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
+                <RegionBarsCard r={shown} region={data.region} onRegion={(id) => update({ region: id })} />
+                <HeatmapCard r={shown} />
+                <DoughnutCard r={shown} region={data.region} />
+                <Card className="span-2 map-card" title="산지 지도" desc="같은 지표·기간의 산지별 판정. 점을 누르면 그 산지로, 점선 네모는 분석 범위">
+                  <div className="map-frame">
+                    <RegionMap
+                      regions={regions}
+                      selected={data.region.id}
+                      onSelect={(id) => update({ region: id })}
+                      comparison={shown.regions}
+                      unit={shown.variable.unit}
+                      higherIs={shown.variable.higher_is}
+                    />
+                  </div>
+                </Card>
+                {data.validation && <ValidationCard v={data.validation} variable={shown.variable} />}
+                <Card className="glow-card" title="내 기록 겹치기" desc="연도,값 형식 CSV (예: 수확량, 서리 피해율). 상관관계는 인과관계가 아닙니다." footer={<p className="card-note">{data.region.blurb}. {data.resolution_note}</p>}>
+                  <label className="input">
+                    <span className="muted">이름</span>
+                    <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} />
+                  </label>
+                  <label
+                    className="drop"
+                    {...(dragOver ? { "data-over": "" } : {})}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      void onFile(e.dataTransfer.files[0]);
+                    }}
+                  >
+                    <input
+                      type="file"
+                      className="sr-only"
+                      accept=".csv,text/csv,text/plain"
+                      onChange={(e) => {
+                        void onFile(e.target.files?.[0]);
+                        e.target.value = ""; // 같은 파일을 다시 골라도 반영되게
+                      }}
+                    />
+                    <span className="btn secondary sm" aria-hidden>
+                      파일 선택
+                    </span>
+                    <span className={`drop-name ${fileName ? "" : "muted"}`}>{fileName ?? "또는 여기에 끌어 놓기"}</span>
+                  </label>
+                  {userSeries && (
+                    <button
+                      className="btn secondary sm"
+                      onClick={() => {
+                        setUserSeries(null);
+                        setFileName(null);
+                      }}
+                    >
+                      겹치기 끄기 ({userSeries.length}개 연도)
+                    </button>
+                  )}
+                </Card>
+              </div>
+
+              {nextRegion && (
+                <button className="next-link" onClick={() => update({ region: nextRegion.id })}>
+                  같은 지표로 {nextRegion.name} 보기 ›
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 닫아도 대화가 남도록 숨기기만. display: contents 라 열려 있을 때는 aside 가 그대로 그리드 칸이 됨 */}
+        {query && data && (
+          <div style={{ display: panel ? "contents" : "none" }}>
+            <InsightPanel
+              query={query}
+              vars={data.results.map((r) => ({ id: r.variable.id, name: r.variable.name }))}
+              current={shown?.variable.id}
+              aiEnabled={!!health?.ai.enabled}
+              onApply={apply}
+              onClose={() => {
+                setPanel(false);
+                requestAnimationFrame(() => openBtn.current?.focus());
+              }}
+            />
+          </div>
         )}
       </div>
-      {!panel && (
-        <button className="btn btn-primary panel-toggle" onClick={() => setPanel(true)}>
-          ✦ 인사이트 AI
-        </button>
-      )}
     </main>
   );
 }

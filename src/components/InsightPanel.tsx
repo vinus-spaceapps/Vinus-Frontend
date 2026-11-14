@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { AnalyzeQuery, Decision, InsightCard, NextStepChange } from "../lib/types";
 import ChatPanel from "./ChatPanel";
@@ -16,30 +16,36 @@ interface Props {
   aiEnabled: boolean;
   onApply: (change: NextStepChange, varId: string) => void;
   onClose: () => void;
+  current?: string; // 본문에서 보고 있는 변수: 바뀌면 AI 도 그 변수 기준으로
 }
+
+const EXAMPLES = ["2020년 영향", "신뢰구간 뜻", "우리 밭 적용 여부", "다른 산지와 비교"];
 
 const CELLS: { key: keyof InsightCard; title: string }[] = [
   { key: "summary", title: "한 줄 요약" },
-  { key: "numbers", title: "숫자로 보면" },
-  { key: "confidence", title: "얼마나 믿을 수 있나" },
-  { key: "meaning", title: "생산자에게 의미" },
+  { key: "numbers", title: "수치" },
+  { key: "confidence", title: "신뢰도" },
+  { key: "meaning", title: "생산자 관점" },
 ];
 
 function SourceBadge({ source, unverified }: { source: string; unverified: string[] }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span className={`badge ${source === "llm" ? "badge-ai" : "badge-fallback"}`}>{source === "llm" ? "Claude" : "규칙 기반"}</span>
+      <span className={`pill-sm ${source === "llm" ? "" : "warn"}`}>{source === "llm" ? "AI" : "규칙 기반"}</span>
       {unverified.length > 0 && <span className="warn-line">엔진 결과에 없는 숫자 포함: {unverified.join(", ")} (확인 필요)</span>}
     </div>
   );
 }
 
 // ④ 인사이트 AI: 엔진 결과를 생산자 말로 풀고, 다음에 볼 것을 버튼으로 제안.
-export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose }: Props) {
+export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose, current }: Props) {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<string | null>(null);
-  const [varId, setVarId] = useState(vars[0]?.id ?? "");
+  const [varId, setVarId] = useState(current ?? vars[0]?.id ?? "");
+  useEffect(() => {
+    if (current) setVarId(current);
+  }, [current]);
   const activeVar = vars.find((v) => v.id === varId) ? varId : vars[0]?.id;
   const varName = vars.find((v) => v.id === activeVar)?.name ?? "";
 
@@ -83,14 +89,15 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
   return (
     <ChatPanel
       title="인사이트 AI"
-      subtitle={aiEnabled ? "계산된 결과만 읽고 쉬운 말로 풀어 드려요" : "AI 꺼짐 · 규칙 기반 요약"}
+      subtitle={aiEnabled ? "통계 결과 해설" : "AI 꺼짐, 규칙 기반 요약"}
       onClose={onClose}
       onSend={ask}
       busy={busy}
-      placeholder="예: 2020년 하나 때문에 나온 결과야?"
+      placeholder="질문 입력"
       scrollKey={items.length}
       footer={
-        <div style={{ padding: "10px 12px 0", display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid var(--line)" }}>
+        (vars.length > 1 || items.length > 0) && (
+        <div className="chat-tools">
           {vars.length > 1 && (
             <select className="chip-select" value={activeVar} onChange={(e) => setVarId(e.target.value)} aria-label="인사이트 대상 변수">
               {vars.map((v) => (
@@ -100,20 +107,37 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
               ))}
             </select>
           )}
-          <button className="btn btn-primary btn-sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
-            ✦ 인사이트 줘
-          </button>
+          {items.length > 0 && (
+            <button className="btn primary sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
+              ✦ 인사이트 보기
+            </button>
+          )}
         </div>
+        )
       }
     >
-      {items.length === 0 && (
-        <div className="msg assistant">
-          [인사이트 줘]를 누르면 지금 그래프와 판정을 생산자 관점에서 풀어 드려요. 숫자는 통계 엔진이 계산한 값만 씁니다. 궁금한 점을 바로 물어보셔도 돼요.
+      {items.length === 0 && !busy && (
+        <div className="ai-empty">
+          <p className="muted small">
+            현재 그래프와 판정 결과 해설
+            <br />
+            통계 엔진이 계산한 수치만 사용
+          </p>
+          <button className="btn primary" onClick={() => requestCard(decision)}>
+            ✦ 인사이트 보기
+          </button>
+          <div className="chat-suggest">
+            {EXAMPLES.map((q) => (
+              <button key={q} className="chip" onClick={() => ask(q)}>
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {items.map((it, i) => {
         if (it.kind === "user") return <div key={i} className="msg user">{it.text}</div>;
-        if (it.kind === "error") return <div key={i} className="msg assistant">답변을 가져오지 못했어요. {it.text}</div>;
+        if (it.kind === "error") return <div key={i} className="msg assistant">응답을 받을 수 없습니다. {it.text}</div>;
         if (it.kind === "ask")
           return (
             <div key={i} className="msg assistant">
@@ -121,7 +145,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
               {!it.answered && (
                 <div className="decision-grid" style={{ marginTop: 10 }}>
                   {it.options.map((o) => (
-                    <button key={o.id} className="btn btn-ghost btn-sm" onClick={() => choose(i, o)}>
+                    <button key={o.id} className="chip" onClick={() => choose(i, o)}>
                       {o.label}
                     </button>
                   ))}
@@ -150,11 +174,11 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
             ))}
             {it.card.next_steps.length > 0 && (
               <div className="insight-cell">
-                <h4>다음에 확인해 볼 것</h4>
+                <h4>추가 확인</h4>
                 <div className="next-steps">
                   {it.card.next_steps.map((s) => (
                     <button key={s.label} onClick={() => onApply(s.change, activeVar!)}>
-                      → {s.label}
+                      {s.label}
                     </button>
                   ))}
                 </div>

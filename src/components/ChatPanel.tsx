@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Icon from "./Icon";
 
 interface Props {
   title: string;
@@ -36,8 +37,8 @@ export default function ChatPanel({ title, subtitle, onClose, children, onSend, 
           <h3>{title}</h3>
           {subtitle && <div className="sub">{subtitle}</div>}
         </div>
-        <button className="icon-btn" onClick={onClose} aria-label="패널 닫기" title="닫기">
-          ✕
+        <button className="ic" onClick={onClose} aria-label="패널 닫기" title="닫기">
+          <Icon name="close" size={20} />
         </button>
       </div>
       <div className="chat-body" ref={bodyRef}>
@@ -56,9 +57,9 @@ export default function ChatPanel({ title, subtitle, onClose, children, onSend, 
           submit();
         }}
       >
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder ?? "메시지를 입력하세요"} disabled={busy} />
-        <button className="btn btn-primary btn-sm" type="submit" disabled={busy || !text.trim()}>
-          보내기
+        <input className="input pill" value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder ?? "메시지를 입력하세요"} disabled={busy} />
+        <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
+          전송
         </button>
       </form>
     </aside>

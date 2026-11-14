@@ -2,6 +2,7 @@ import type {
   AnalysisResponse,
   AnalyzeQuery,
   Category,
+  Family,
   ChatMsg,
   Health,
   InsightResponse,
@@ -41,7 +42,7 @@ const post = <T>(path: string, body: unknown) => request<T>(path, { method: "POS
 
 export const api = {
   health: () => request<Health>("/api/health"),
-  variables: () => request<{ categories: Category[]; variables: Variable[] }>("/api/variables"),
+  variables: () => request<{ categories: Category[]; families: Family[]; variables: Variable[] }>("/api/variables"),
   regions: () => request<Region[]>("/api/regions"),
   analyze: (q: AnalyzeQuery) => post<AnalysisResponse>("/api/analyze", q),
   variableChat: (messages: ChatMsg[], basket: string[]) => post<VariableChatResponse>("/api/ai/variables", { messages, basket }),

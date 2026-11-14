@@ -1,88 +1,88 @@
-import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, type DotProps } from "recharts";
+import { Area, Bar, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { fmtNum, lineAt, signed } from "../lib/format";
 import type { VariableResult } from "../lib/types";
+import { useTokens } from "../theme";
 
 interface Row {
   year: number;
-  value?: number;
-  head?: number;
-  other?: number;
-  user?: number;
+  value: number;
+  sen?: number;
+  ols?: number;
+  overlay?: number;
 }
 
-interface Props {
-  r: VariableResult;
+// Figma 툴팁 (검정 바탕 + 흰 글자)
+function Tip({ active, payload, unit }: { active?: boolean; payload?: { payload: Row }[]; unit: string }) {
+  const p = payload?.[0]?.payload;
+  if (!active || !p) return null;
+  const diff = p.sen !== undefined ? p.value - p.sen : null;
+  return (
+    <div className="tip">
+      <small>{p.year}년</small>
+      <b>
+        {fmtNum(p.value, 2)}
+        {unit}
+      </b>
+      {diff !== null && (
+        <small>
+          추세보다 {signed(diff)}
+          {unit}
+        </small>
+      )}
+      {p.overlay !== undefined && <small>내 기록 {fmtNum(p.overlay, 2)}</small>}
+    </div>
+  );
 }
 
-// 연도별 점 + 추세선. 튼튼한 지표(robust)는 Sen 기울기가 굵은 선, OLS 는 옅은 선.
-export default function TrendChart({ r }: Props) {
-  const robust = r.stats.method === "sen";
-  const head = robust ? r.trend.sen : r.trend.ols;
-  const other = robust ? r.trend.ols : r.trend.sen;
-  const lo = r.stats.leave_out.year;
+// 날수(count)만 0 기준 막대가 뜻이 있음. 합계(적산온도 1,600~2,100 등)·평균·최댓값은 선으로 봐야 변화가 보임
+export const asBars = (r: VariableResult) => r.variable.aggregation === "count" && Math.min(...r.series.map((p) => p.value)) >= 0;
+
+// 연도별 값: 날수는 $890.93 카드의 둥근 막대, 그 밖(기온·합계 등)은 Monthly Average Rainfall 의 선 + 옅은 면.
+// 가장 큰 해는 진한 막대 + 점선 기준선, Sen 추세는 진한 선, OLS 는 회색 점선.
+export default function TrendChart({ r }: { r: VariableResult }) {
+  const t = useTokens();
   const unit = r.variable.unit;
-
-  const rows = new Map<number, Row>();
-  const row = (y: number) => rows.get(y) ?? rows.set(y, { year: y }).get(y)!;
-  r.series.forEach((p) => (row(p.year).value = p.value));
-  head.forEach((p) => (row(p.year).head = p.value));
-  other.forEach((p) => (row(p.year).other = p.value));
-  r.overlay?.points.forEach((p) => {
-    if (p.year >= r.start && p.year <= r.end) row(p.year).user = p.value;
-  });
-  const data = [...rows.values()].sort((a, b) => a.year - b.year);
-
-  const Dot = (props: DotProps & { payload?: Row }) => {
-    const { cx, cy, payload } = props;
-    if (cx == null || cy == null || payload?.value == null) return null;
-    const isLo = payload.year === lo;
-    return <circle cx={cx} cy={cy} r={isLo ? 6 : 4} fill={isLo ? "#d69e2e" : "#7a1f3d"} stroke="#fff" strokeWidth={1.5} />;
-  };
+  const ov = new Map((r.overlay?.points ?? []).map((p) => [p.year, p.value]));
+  const data: Row[] = r.series.map((p) => ({ year: p.year, value: p.value, sen: lineAt(r.trend.sen, p.year), ols: lineAt(r.trend.ols, p.year), overlay: ov.get(p.year) }));
+  const vals = data.map((d) => d.value);
+  const max = Math.max(...vals);
+  const peak = data.find((d) => d.value === max)?.year;
+  const bars = asBars(r);
+  const axis = { tickLine: false, axisLine: false, tick: { fill: t.axis, fontSize: 12 } } as const;
 
   return (
-    <div>
+    <div className="trend" role="img" aria-label={`${r.variable.name} 연도별 값과 추세선, ${r.start}–${r.end}`}>
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={data} margin={{ top: 10, right: r.overlay ? 8 : 16, bottom: 0, left: -8 }}>
-          <CartesianGrid stroke="#eee6e1" vertical={false} />
-          <XAxis dataKey="year" type="number" domain={[r.start, r.end]} tickCount={8} allowDecimals={false} tick={{ fontSize: 12 }} />
-          <YAxis yAxisId="l" tick={{ fontSize: 12 }} width={56} label={{ value: unit, angle: -90, position: "insideLeft", offset: 18, fontSize: 12, fill: "#6b6468" }} />
-          {r.overlay && <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 12 }} width={48} stroke="#2b6cb0" />}
-          <Tooltip
-            formatter={(v: number, name: string) => [typeof v === "number" ? v.toFixed(2).replace(/\.00$/, "") : v, name]}
-            labelFormatter={(y) => `${y}년`}
-            contentStyle={{ borderRadius: 10, fontSize: 13 }}
-          />
-          <Line yAxisId="l" dataKey="value" name={`${r.variable.name} (${unit})`} stroke="#7a1f3d" strokeOpacity={0.25} strokeWidth={1.5} dot={<Dot />} isAnimationActive={false} />
-          <Line yAxisId="l" dataKey="other" name={robust ? "OLS 추세선" : "Sen 추세선"} stroke="#8a8f98" strokeDasharray="3 4" strokeWidth={1.5} dot={false} connectNulls isAnimationActive={false} />
-          <Line yAxisId="l" dataKey="head" name={robust ? "Sen 추세선" : "OLS 추세선"} stroke="#b8892b" strokeWidth={3} dot={false} connectNulls isAnimationActive={false} />
-          {r.overlay && (
-            <Line yAxisId="r" dataKey="user" name={r.overlay.label} stroke="#2b6cb0" strokeWidth={2} dot={{ r: 3 }} connectNulls isAnimationActive={false} />
+        <ComposedChart data={data} margin={{ top: 22, right: r.overlay ? 8 : 40, left: 0, bottom: 0 }} barCategoryGap="18%">
+          <defs>
+            <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={t.w4} stopOpacity={0.35} />
+              <stop offset="1" stopColor={t.w4} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="year" {...axis} interval="preserveStartEnd" minTickGap={14} />
+          <YAxis {...axis} width={48} domain={bars ? [0, "auto"] : ["auto", "auto"]} tickFormatter={(v: number) => fmtNum(v)} />
+          {r.overlay && <YAxis yAxisId="ov" orientation="right" {...axis} width={40} />}
+          <ReferenceLine y={max} stroke={t.w3} strokeDasharray="5 5" strokeWidth={2} label={{ value: `MAX ${peak}`, position: "insideTopRight", fill: "#000", fontSize: 12, fontWeight: 700, dy: -16 }} />
+          {bars ? (
+            <Bar dataKey="value" radius={[8, 8, 8, 8]} isAnimationActive={false}>
+              {data.map((d) => (
+                <Cell key={d.year} fill={d.year === peak ? t.w3 : t.barOff} />
+              ))}
+            </Bar>
+          ) : (
+            <>
+              <Area dataKey="value" stroke="none" fill="url(#trend-area)" isAnimationActive={false} />
+              <Line dataKey="value" stroke={t.w3} strokeWidth={2} dot={{ r: 3, fill: t.w3, strokeWidth: 0 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+            </>
           )}
+          <Line dataKey="ols" stroke={t.muted} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} isAnimationActive={false} />
+          <Line dataKey="sen" stroke={t.ink} strokeWidth={2.5} dot={false} activeDot={false} isAnimationActive={false} />
+          {r.overlay && <Line yAxisId="ov" dataKey="overlay" stroke={t.blue} strokeWidth={2} dot={{ r: 3, fill: t.blue, strokeWidth: 0 }} connectNulls isAnimationActive={false} />}
+          {/* 툴팁은 포인터에 바로 붙게 (기본 400ms 미끄러짐 끔), 어두운 바탕용 옅은 흰 커서 */}
+          <Tooltip content={<Tip unit={unit} />} cursor={{ fill: "rgb(255 255 255 / 0.05)" }} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
-      <div className="chart-legend">
-        <span>
-          <i style={{ background: "#7a1f3d", height: 8, width: 8, borderRadius: 4 }} />
-          연도별 값
-        </span>
-        <span>
-          <i style={{ background: "#b8892b" }} />
-          {robust ? "Sen 추세선 (헤드라인)" : "OLS 추세선 (헤드라인)"}
-        </span>
-        <span>
-          <i style={{ background: "#8a8f98" }} />
-          {robust ? "OLS 추세선" : "Sen 추세선"}
-        </span>
-        <span>
-          <i style={{ background: "#d69e2e", height: 8, width: 8, borderRadius: 4 }} />
-          가장 튄 해 ({lo})
-        </span>
-        {r.overlay && (
-          <span>
-            <i style={{ background: "#2b6cb0" }} />
-            {r.overlay.label} (오른쪽 축)
-          </span>
-        )}
-      </div>
     </div>
   );
 }

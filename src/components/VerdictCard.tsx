@@ -1,103 +1,91 @@
-import { pText, signed, trendTone } from "../lib/format";
-import type { Region, VariableResult } from "../lib/types";
-
-interface Props {
-  r: VariableResult;
-  region: Region;
-  onThreshold: (value: number) => void;
-}
+import { pText, signed } from "../lib/format";
+import type { VariableResult } from "../lib/types";
+import { Card, Seg } from "./DashCards";
 
 function detectText(r: VariableResult): string | null {
   const d = r.stats.detectable;
   if (!d) return null;
-  if (d.status === "need_more") return `현재 추세가 유지되면 약 ${d.more_years}년 더 관측해야 유의해질 수 있음 (근사, 총 ${d.total_years}년)`;
+  if (d.status === "need_more") return `지금 기울기가 이어지면 약 ${d.more_years}년 더 관측해야 유의해질 수 있음 (근사, 총 ${d.total_years}년)`;
   if (d.status === "length_enough") return "관측 기간은 충분한 편이라, 실제 변화는 지금 기울기보다 작거나 없을 수 있음";
   return "기울기가 0에 가까워 탐지 가능 연수를 추정할 수 없음";
 }
 
-// 판정 카드: 엔진 숫자를 쉬운 말로.
-export default function VerdictCard({ r, region, onThreshold }: Props) {
+// 검정 상세: Figma Statistic 카드 (제목·설명 / 본문 / 아래 '기준값' 이름표 + 알약 칩 줄)
+export default function VerdictCard({ r, onThreshold }: { r: VariableResult; onThreshold: (value: number) => void }) {
   const st = r.stats;
-  const tone = trendTone(st.verdict.status, st.verdict.direction);
-  const unit = r.variable.unit;
-  const [lo, hi] = st.ci_per_decade;
-  const det = detectText(r);
   const v = r.variable;
+  const unit = v.unit;
+  const det = detectText(r);
+  const opts = v.threshold_options.length > 1 ? v.threshold_options : null;
 
   return (
-    <div className={`card verdict ${tone}`}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-        <span className="where">
-          {region.name} · {v.name} · {r.start}~{r.end}
-        </span>
-        <span className={`badge ${r.is_mock ? "badge-mock" : "badge-real"}`} title={r.source_note}>
-          {r.is_mock ? "예시 데이터" : "NASA 집계"}
-        </span>
-      </div>
-      <div className="label">{st.verdict.label}</div>
-      <div className="rate">
-        10년에 {signed(st.slope_per_decade)}
-        {unit}
-        <span className="muted small" style={{ fontWeight: 500 }}>
-          {" "}
-          (95% 신뢰구간 {signed(lo)} ~ {signed(hi)})
-        </span>
-      </div>
-      <dl>
+    <Card
+      title="검정 상세"
+      desc="p값: 추세가 없다고 가정할 때 이만한 변화가 우연히 나올 확률"
+      footer={
+        opts && (
+          <div className="foot-seg">
+            <span className="muted">기준값 ({v.condition})</span>
+            <Seg
+              label="기준값"
+              options={opts.map((o) => ({ id: String(o), label: `${o}${v.threshold_unit}` }))}
+              value={String(r.threshold)}
+              onChange={(id) => onThreshold(Number(id))}
+            />
+          </div>
+        )
+      }
+    >
+      <dl className="vd">
         <dt>기울기 방법</dt>
         <dd>{st.method === "sen" ? "Sen (튀는 해에 덜 흔들림)" : "OLS 최소제곱"}</dd>
-        <dt>Mann-Kendall</dt>
-        <dd>{pText(st.mk.p)}</dd>
-        <dt>t-검정 (기울기≠0)</dt>
-        <dd>{pText(st.ols.p)}</dd>
-        <dt>초기 → 최근</dt>
-        <dd>
-          {st.early.mean.toFixed(1)} → {st.late.mean.toFixed(1)}
-          {unit} ({st.early.from}~{st.early.to} vs {st.late.from}~{st.late.to})
+        <dt>Sen 기울기</dt>
+        <dd className="num">
+          {signed(st.sen.slope_per_decade)}
+          {unit} / 10년
         </dd>
+        <dt>OLS 기울기</dt>
+        <dd className="num">
+          {signed(st.ols.slope_per_decade)}
+          {unit} / 10년
+        </dd>
+        <dt>Mann-Kendall</dt>
+        <dd className="num">
+          {pText(st.mk.p)} (tau {st.mk.tau.toFixed(2)})
+        </dd>
+        <dt>t-검정</dt>
+        <dd className="num">{pText(st.ols.p)}</dd>
+        <dt>자기상관 보정</dt>
+        <dd className="num">{pText(st.ols.p_ar1)}</dd>
+        <dt>연수</dt>
+        <dd className="num">{st.n}년</dd>
       </dl>
-      <p className="muted small">p값은 추세가 없을 때 이만한 변화가 우연히 나올 확률입니다.</p>
 
-      {det && <div className="flag info">{det}</div>}
-      {st.flags.includes("tests_disagree") && <div className="flag">t-검정과 Mann-Kendall 결과가 엇갈립니다. 몇몇 해의 큰 값이 기울기를 끌어올렸을 수 있어요.</div>}
+      {det && <p className="flag info">{det}</p>}
+      {st.flags.includes("tests_disagree") && <p className="flag">t-검정과 Mann-Kendall 결과가 다름. 일부 해의 큰 값이 기울기에 영향을 줬을 수 있음.</p>}
       {st.flags.includes("one_year_drives_result") && (
-        <div className="flag">
-          가장 튄 {st.leave_out.year}년을 빼면 판정이 '{st.leave_out.verdict.label}'(으)로 바뀝니다. 한 해가 결과를 좌우하고 있어요.
-        </div>
+        <p className="flag">
+          가장 튄 {st.leave_out.year}년을 빼면 판정이 '{st.leave_out.verdict.label}'. 한 해가 결과를 좌우함.
+        </p>
       )}
-      {!st.flags.includes("one_year_drives_result") && st.verdict.status === "significant" && (
-        <div className="flag info">가장 튄 {st.leave_out.year}년을 빼도 판정은 그대로예요.</div>
-      )}
-      {st.flags.includes("autocorrelation_weakens") && (
-        <div className="flag">해마다 값이 이어지는 경향(자기상관)을 보정하면 t-검정 {pText(st.ols.p_ar1)}로 유의성이 약해집니다.</div>
-      )}
-
-      {v.threshold_options.length > 1 && (
-        <div className="threshold-row">
-          <span className="muted">기준값</span>
-          {v.threshold_options.map((o) => (
-            <button key={o} className={r.threshold === o ? "on" : ""} onClick={() => onThreshold(o)}>
-              {o}
-              {v.threshold_unit}
-            </button>
-          ))}
-        </div>
-      )}
-
+      {!st.flags.includes("one_year_drives_result") && st.verdict.status === "significant" && <p className="flag info">가장 튄 {st.leave_out.year}년을 빼도 판정 같음.</p>}
+      {st.flags.includes("autocorrelation_weakens") && <p className="flag">자기상관 보정 시 t-검정 {pText(st.ols.p_ar1)} (유의성 약해짐).</p>}
       {r.overlay && (
-        <div className="flag info">
+        <p className="flag info">
           {r.overlay.label}와의 상관:{" "}
           {r.overlay.correlation
             ? `r = ${r.overlay.correlation.r.toFixed(2)} (${pText(r.overlay.correlation.p)}, ${r.overlay.correlation.n}개 연도)`
             : `겹치는 연도가 ${r.overlay.common_years}개라 계산하지 않음`}
           . {r.overlay.note}
-        </div>
-      )}
-      {r.notes.map((n) => (
-        <p key={n} className="muted small">
-          · {n}
         </p>
-      ))}
-    </div>
+      )}
+      {r.notes.length > 0 && (
+        <ul className="notes">
+          {r.notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }

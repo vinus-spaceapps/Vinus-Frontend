@@ -1,9 +1,16 @@
 // 백엔드(Vinus-Backend) 응답 타입
 
-export type CategoryId = "temp_frost" | "rain_water" | "smoke_air" | "growth";
+// 카테고리·묶음은 백엔드가 정함 (기온·서리, 더위, 비, 가뭄·토양, 병해·습도, 햇빛·바람, 연기·대기, 생육·시기)
+export type CategoryId = string;
 
 export interface Category {
   id: CategoryId;
+  name: string;
+}
+
+// 지표 묶음: core(핵심 100) · etccdi · extremes(평년 대비 극값) · stats(월·계절 기본 통계)
+export interface Family {
+  id: string;
   name: string;
 }
 
@@ -23,9 +30,13 @@ export interface Variable {
   threshold: number | null;
   threshold_unit: string;
   threshold_options: number[];
-  aggregation: "count" | "sum" | "mean";
+  aggregation: "count" | "sum" | "mean" | "min" | "max";
   robust: boolean;
   higher_is: "worse" | "better" | "neutral";
+  station_var: "tmin" | "tmax" | "tmean" | null;
+  has_real_data: boolean;
+  keywords: string[];
+  family: string;
   sections: { definition?: string; why?: string; guide?: string; caveats?: string; references?: string };
 }
 
@@ -37,9 +48,16 @@ export interface Region {
   country: string;
   lat: number;
   lon: number;
+  bbox?: [number, number, number, number]; // 남·북 위도, 서·동 경도
   hemisphere: "N" | "S";
   stages: Record<StageKey, string>;
   blurb: string;
+}
+
+// 지상 관측소·MODIS 1km 와 비교한 검증 요약 (산지마다 있는 것만)
+export interface Validation {
+  station?: { id: string; days: number; tmin_bias: number; tmin_corr: number; tmax_bias: number; tmax_corr: number };
+  modis?: { periods: number; lst_minus_grid_tmin: number; pixel_spread_mean: number; pixel_spread_max: number; cold_pixel_periods: number; grid_cold_periods: number };
 }
 
 export type VerdictStatus = "significant" | "mixed" | "not_significant";
@@ -124,6 +142,7 @@ export interface AnalysisResponse {
   end: number;
   stages: Record<StageKey, string>;
   resolution_note: string;
+  validation: Validation | null;
   is_mock: boolean;
   results: VariableResult[];
 }
@@ -178,5 +197,5 @@ export type InsightResponse =
 
 export interface Health {
   ok: boolean;
-  ai: { enabled: boolean; model: string; reason: string };
+  ai: { enabled: boolean; provider?: string; model: string; reason: string };
 }

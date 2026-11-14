@@ -1,40 +1,55 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ChatPanel from "../components/ChatPanel";
-import VariableCard from "../components/VariableCard";
+import { Seg } from "../components/DashCards";
+import Icon from "../components/Icon";
+import VariableCard, { VariableRow } from "../components/VariableCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
 import { wideScreen } from "../lib/format";
 import { BASKET_LIMIT, useSelection } from "../lib/selection";
-import type { CategoryId, ChatMsg, VariableChatResponse } from "../lib/types";
+import type { ChatMsg, VariableChatResponse } from "../lib/types";
 
 interface UiMsg extends ChatMsg {
   meta?: Pick<VariableChatResponse, "add" | "source">;
 }
 
-const SUGGESTIONS = ["봄마다 서리 때문에 걱정이야", "수확기에 산불 연기가 걱정돼", "적산온도가 뭐야?", "지금 품종이 계속 맞을까?"];
+const SUGGESTIONS = ["봄 서리 피해", "수확기 곰팡이병", "적산온도란?", "열대야"];
+const PAGE = 40;
 
 const WELCOME: UiMsg = {
   role: "assistant",
-  content: "무엇이 걱정되세요? 말씀해 주시면 관련 변수를 골라 바구니에 담아 드릴게요. 변수 뜻을 물어보셔도 됩니다.",
+  content: "걱정되는 기후 문제를 입력하면 관련 변수를 추천합니다. 변수 뜻도 물어볼 수 있습니다.",
 };
 
 export default function VariablePicker() {
   const nav = useNavigate();
-  const { categories, variables, health } = useCatalog();
+  const { categories, families, variables, health } = useCatalog();
   const { sel, addVar, removeVar } = useSelection();
-  const [tab, setTab] = useState<CategoryId | "all">("all");
+  const [sp] = useSearchParams();
+  const [fam, setFam] = useState(sp.get("f") ?? "core");
+  const [cat, setCat] = useState("all");
+  const [q, setQ] = useState("");
+  const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState(wideScreen);
   const [msgs, setMsgs] = useState<UiMsg[]>([WELCOME]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const shown = tab === "all" ? variables : variables.filter((v) => v.category === tab);
-  const catOf = (id: CategoryId) => categories.find((c) => c.id === id);
+  // 검색어가 있으면 묶음과 상관없이 전체에서, 없으면 고른 묶음 안에서
+  const term = q.trim().toLowerCase();
+  const pool = term
+    ? variables.filter((v) => [v.name, v.short, v.id, ...v.keywords].some((s) => s.toLowerCase().includes(term)))
+    : variables.filter((v) => v.family === fam);
+  const shown = cat === "all" ? pool : pool.filter((v) => v.category === cat);
+  const asCards = !term && fam === "core";
+  const catOf = (id: string) => categories.find((c) => c.id === id);
+  const famOf = (id: string) => families.find((f) => f.id === id)?.name ?? id;
+  const famCount = (id: string) => variables.filter((v) => v.family === id).length;
 
   const toggle = (id: string) => {
     if (sel.basket.includes(id)) return removeVar(id);
-    if (!addVar(id)) setNotice(`바구니는 최대 ${BASKET_LIMIT}개까지 담을 수 있어요. 그래프 비교가 읽히는 수준이에요.`);
+    if (!addVar(id)) setNotice(`최대 ${BASKET_LIMIT}개까지 선택할 수 있습니다.`);
     else setNotice(null);
   };
 
@@ -55,71 +70,123 @@ export default function VariablePicker() {
       });
       setMsgs([...next, { role: "assistant", content: res.reply, meta: { add: added, source: res.source } }]);
     } catch (e) {
-      setMsgs([...next, { role: "assistant", content: `답변을 가져오지 못했어요. ${(e as Error).message}` }]);
+      setMsgs([...next, { role: "assistant", content: `응답을 받을 수 없습니다. ${(e as Error).message}` }]);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <main className="container page">
-      <div className={`with-panel ${open ? "open" : ""}`}>
-        <section>
-          <div className="page-title">
-            <div>
-              <h1>① 분석할 변수 고르기</h1>
-              <p>카드를 누르면 바구니에 담겨요. 마우스를 올리면 쉬운 설명이 나옵니다. 최대 {BASKET_LIMIT}개.</p>
-            </div>
-          </div>
+    <main>
+      <header className="page-hero">
+        <div className="page-hero-art" aria-hidden>
+          <span />
+        </div>
+        <div className="wrap">
+          <p className="label">1단계</p>
+          <h1>변수 고르기</h1>
+          <p className="lead">
+            지표 {variables.length}개 중 최대 {BASKET_LIMIT}개. 핵심 지표 카드에 마우스를 올리면 정의와 의미가 뜹니다.
+          </p>
+        </div>
+      </header>
 
-          <div className="tabs" role="tablist">
-            <button className={`tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>
-              전체
-            </button>
-            {categories.map((c) => (
-              <button key={c.id} className={`tab ${tab === c.id ? "active" : ""}`} onClick={() => setTab(c.id)}>
-                {c.name}
-              </button>
+      {/* 고른 변수 바: Episode 의 Listen 바처럼 위에 붙어 따라옴 */}
+      <div className="sticky-bar">
+        <div className="wrap sticky-in">
+          <span className="lbl num">
+            선택 {sel.basket.length}/{BASKET_LIMIT}
+          </span>
+          <div className="chips">
+            {sel.basket.length === 0 && <span className="muted">아직 없음</span>}
+            {sel.basket.map((id) => (
+              <span className="tab-chip" key={id}>
+                <span className="t">{variables.find((v) => v.id === id)?.name ?? id}</span>
+                <button className="x" onClick={() => removeVar(id)} aria-label="빼기">
+                  <Icon name="close" size={14} />
+                </button>
+              </span>
             ))}
           </div>
+          {notice && <span className="warn-line">{notice}</span>}
+          <span className="spacer" />
+          <button className="btn secondary sm" aria-pressed={open} onClick={() => setOpen((o) => !o)}>
+            <Icon name="comment" size={16} /> 추천 AI
+          </button>
+          <button className="btn primary sm" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
+            다음
+          </button>
+        </div>
+      </div>
 
-          <div className="var-grid">
-            {shown.map((v) => (
-              <VariableCard key={v.id} v={v} category={catOf(v.category)} inBasket={sel.basket.includes(v.id)} onToggle={() => toggle(v.id)} />
-            ))}
-          </div>
+      <div className={`wrap with-panel ${open ? "open" : ""}`}>
+        <section className="picker">
+          <label className="input search">
+            <Icon name="search" size={20} />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름·키워드로 찾기 (예: 서리, 열대야, ETCCDI)" aria-label="지표 검색" />
+          </label>
 
-          <div className="card basket">
-            <span className="lbl">
-              분석 바구니 {sel.basket.length}/{BASKET_LIMIT}
-            </span>
-            <div className="chips">
-              {sel.basket.length === 0 && <span className="muted small">아직 비어 있어요. 카드를 누르거나 AI에게 걱정을 말해 보세요.</span>}
-              {sel.basket.map((id) => (
-                <span className="chip" key={id}>
-                  {variables.find((v) => v.id === id)?.name ?? id}
-                  <button onClick={() => removeVar(id)} aria-label="바구니에서 빼기">
-                    ×
-                  </button>
-                </span>
+          {!term && (
+            <Seg
+              label="지표 묶음"
+              options={families.map((f) => ({ id: f.id, label: `${f.name} ${famCount(f.id)}` }))}
+              value={fam}
+              onChange={(id) => {
+                setFam(id);
+                setCat("all");
+                setLimit(PAGE);
+              }}
+            />
+          )}
+          <Seg
+            label="카테고리"
+            options={[{ id: "all", label: `전체 ${pool.length}` }, ...categories.map((c) => ({ id: c.id, label: `${c.name} ${pool.filter((v) => v.category === c.id).length}` })).filter((o) => !o.label.endsWith(" 0"))]}
+            value={cat}
+            onChange={(id) => {
+              setCat(id);
+              setLimit(PAGE);
+            }}
+          />
+
+          {shown.length === 0 && <p className="empty">찾는 지표가 없습니다. 다른 낱말로 찾아보세요.</p>}
+          {asCards ? (
+            <div className="var-grid">
+              {shown.map((v) => (
+                <VariableCard key={v.id} v={v} category={catOf(v.category)} inBasket={sel.basket.includes(v.id)} onToggle={() => toggle(v.id)} />
               ))}
             </div>
-            {notice && <span className="warn-line">{notice}</span>}
-            <span className="spacer" />
-            <button className="btn btn-primary" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
-              다음: 지역 설정 →
-            </button>
-          </div>
+          ) : (
+            shown.length > 0 && (
+              <>
+                <ul className="vrows">
+                  {shown.slice(0, limit).map((v) => (
+                    <VariableRow
+                      key={v.id}
+                      v={v}
+                      sub={`${famOf(v.family)} · ${catOf(v.category)?.name ?? ""}`}
+                      inBasket={sel.basket.includes(v.id)}
+                      onToggle={() => toggle(v.id)}
+                    />
+                  ))}
+                </ul>
+                {shown.length > limit && (
+                  <button className="btn secondary more" onClick={() => setLimit((l) => l + PAGE * 2)}>
+                    더 보기 ({shown.length - limit}개 남음)
+                  </button>
+                )}
+              </>
+            )
+          )}
         </section>
 
         {open && (
           <ChatPanel
-            title="변수 담기 AI"
-            subtitle={health?.ai.enabled ? "걱정을 말하면 맞는 변수를 담아 드려요" : "AI 꺼짐 · 키워드로 찾아 드려요"}
+            title="변수 추천 AI"
+            subtitle={health?.ai.enabled ? "질문에 맞는 변수 추천" : "AI 꺼짐, 키워드 검색"}
             onClose={() => setOpen(false)}
             onSend={send}
             busy={busy}
-            placeholder="예: 봄마다 서리 때문에 걱정이야"
+            placeholder="예: 봄 서리 피해"
             scrollKey={msgs.length}
           >
             {msgs.map((m, i) => (
@@ -128,7 +195,7 @@ export default function VariablePicker() {
                 {m.meta && m.meta.add.length > 0 && (
                   <div className="added">
                     {m.meta.add.map((a) => (
-                      <span key={a.id} className="badge badge-ai">
+                      <span key={a.id} className="pill-sm on">
                         + {a.name}
                       </span>
                     ))}
@@ -136,7 +203,7 @@ export default function VariablePicker() {
                 )}
                 {m.meta && (
                   <div className="src">
-                    <span className={`badge ${m.meta.source === "llm" ? "badge-ai" : "badge-fallback"}`}>{m.meta.source === "llm" ? "Claude" : "규칙 기반"}</span>
+                    <span className={`pill-sm ${m.meta.source === "llm" ? "" : "warn"}`}>{m.meta.source === "llm" ? "AI" : "규칙 기반"}</span>
                   </div>
                 )}
               </div>
@@ -144,7 +211,7 @@ export default function VariablePicker() {
             {msgs.length === 1 && (
               <div className="chat-suggest">
                 {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => send(s)}>
+                  <button key={s} className="chip" onClick={() => send(s)}>
                     {s}
                   </button>
                 ))}
@@ -153,11 +220,6 @@ export default function VariablePicker() {
           </ChatPanel>
         )}
       </div>
-      {!open && (
-        <button className="btn btn-primary panel-toggle" onClick={() => setOpen(true)}>
-          ✦ 변수 담기 AI
-        </button>
-      )}
     </main>
   );
 }
