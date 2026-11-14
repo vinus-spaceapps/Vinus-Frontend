@@ -1,6 +1,6 @@
 import L from "leaflet";
-import { useEffect } from "react";
-import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { TONE_COLOR, TONE_LABEL, trendTone } from "../lib/format";
 import type { Region, RegionComparison } from "../lib/types";
 
@@ -12,12 +12,19 @@ interface Props {
   unit?: string;
 }
 
-function pinIcon(color: string, big: boolean) {
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+
+// 로고의 궤도 모양 마커: 가운데 점(데이터 색) + 기울어진 궤도, 선택된 산지에만 위성 점.
+function orbitIcon(color: string, sel: boolean, name: string, sub: string | null) {
   return L.divIcon({
-    className: "",
-    html: `<div class="pin ${big ? "big" : ""}" style="background:${color}"></div>`,
-    iconSize: big ? [24, 24] : [16, 16],
-    iconAnchor: big ? [12, 12] : [8, 8],
+    className: "mk-icon",
+    html:
+      `<div class="mk"${sel ? " data-sel" : ""} style="--tone:${color}">` +
+      `<svg class="mk-orbit" viewBox="0 0 44 28" aria-hidden="true"><ellipse cx="22" cy="14" rx="19" ry="7" transform="rotate(-18 22 14)"/></svg>` +
+      `<span class="mk-core"></span>${sel ? '<span class="mk-sat"></span>' : ""}` +
+      `<span class="mk-label">${esc(name)}${sub ? `<small>${esc(sub)}</small>` : ""}</span></div>`,
+    iconSize: [44, 28],
+    iconAnchor: [22, 14],
   });
 }
 
@@ -29,46 +36,57 @@ function FlyTo({ region }: { region?: Region }) {
   return null;
 }
 
+// 페이지 스크롤이 지도에 걸리지 않게: 휠 줌은 지도를 누른 뒤에만, 지도를 벗어나면 다시 끔.
+function WheelOnClick() {
+  const map = useMapEvents({
+    click: () => map.scrollWheelZoom.enable(),
+    mouseout: () => map.scrollWheelZoom.disable(),
+  });
+  return null;
+}
+
 export default function RegionMap({ regions, selected, onSelect, comparison, unit }: Props) {
   const sel = regions.find((r) => r.id === selected);
+  // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼워 위성 등장 효과가 반복되므로 고정
+  const icons = useMemo(
+    () =>
+      Object.fromEntries(
+        regions.map((r) => {
+          const c = comparison?.find((x) => x.region_id === r.id);
+          const isSel = r.id === selected;
+          const color = c ? TONE_COLOR[trendTone(c.status, c.direction)] : isSel ? "#fff" : "rgb(255 255 255 / .45)";
+          const sub = c ? `${c.label} · 10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : r.country;
+          return [r.id, orbitIcon(color, isSel, r.name, sub)];
+        }),
+      ),
+    [regions, selected, comparison, unit],
+  );
+
   return (
     <>
-      <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom>
+      <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false}>
         <TileLayer
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          // CARTO 다크 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 다크 그레이 베이스맵 사용
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
         <FlyTo region={sel} />
-        {regions.map((r) => {
-          const c = comparison?.find((x) => x.region_id === r.id);
-          const tone = c ? trendTone(c.status, c.direction) : null;
-          const color = tone ? TONE_COLOR[tone] : r.id === selected ? "#7a1f3d" : "#b07a8c";
-          return (
-            <Marker
-              key={r.id}
-              position={[r.lat, r.lon]}
-              icon={pinIcon(color, r.id === selected)}
-              eventHandlers={onSelect ? { click: () => onSelect(r.id) } : undefined}
-              zIndexOffset={r.id === selected ? 1000 : 0}
-            >
-              <Tooltip direction="top" offset={[0, -10]} permanent={r.id === selected}>
-                <b>{r.name}</b> · {r.country}
-                {c && (
-                  <>
-                    <br />
-                    {c.label} · 10년에 {c.slope_per_decade >= 0 ? "+" : ""}
-                    {c.slope_per_decade.toFixed(1)}
-                    {unit}
-                  </>
-                )}
-              </Tooltip>
-            </Marker>
-          );
-        })}
+        <WheelOnClick />
+        {regions.map((r) => (
+          <Marker
+            key={r.id}
+            position={[r.lat, r.lon]}
+            icon={icons[r.id]}
+            title={r.name}
+            riseOnHover
+            eventHandlers={onSelect ? { click: () => onSelect(r.id) } : undefined}
+            zIndexOffset={r.id === selected ? 1000 : 0}
+          />
+        ))}
       </MapContainer>
       {comparison && (
-        <div className="map-legend">
+        <div className="map-legend glass">
           {(["up", "down", "mixed", "none"] as const).map((t) => (
             <span key={t}>
               <i style={{ background: TONE_COLOR[t] }} />

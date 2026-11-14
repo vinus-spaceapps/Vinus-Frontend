@@ -19,7 +19,7 @@ function Header() {
     <header className="header">
       <div className="container header-inner">
         <Link to="/" className="brand">
-          <img src="/favicon.svg" width={26} height={26} alt="" />
+          <img src="/logo.svg" width={40} height={28} alt="" />
           Vinus <small>와인 기후 추세 탐정</small>
         </Link>
         {pathname !== "/" && (
