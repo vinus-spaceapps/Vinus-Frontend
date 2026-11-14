@@ -4,7 +4,7 @@ name: CI Frontend
 # 이 job 은 룰셋 필수 체크입니다. 실행이 안 되면 "필수 체크 대기 중" 으로 남아 머지가 막힙니다.
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 # 같은 PR 에 커밋을 연달아 푸시하면 이전 실행을 취소합니다.
 concurrency:

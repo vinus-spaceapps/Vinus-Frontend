@@ -16,16 +16,16 @@ Type: `Feat` `Fix` `Refactor` `Chore` `Docs` `Test`
 ## 작업 순서
 
 1. 이슈를 만듭니다(템플릿 선택, 라벨·Assignee 지정).
-2. 최신 `develop`에서 이슈 번호로 브랜치를 땁니다.
-3. `develop`으로 PR을 올리고 본문에 `close #이슈번호`를 적습니다.
+2. 최신 `main`에서 이슈 번호로 브랜치를 땁니다.
+3. `main`으로 PR을 올리고 본문에 `close #이슈번호`를 적습니다.
 
 ## 머지
 
 | 방향 | 방식 | 승인 | 필수 체크 |
 |---|---|---|---|
-| 작업 브랜치 → `develop` | Squash | 0명 | `ci-frontend` `pr-title` |
-| `develop` → `main` | Merge commit | 0명 | 위 2개 + `main-source` |
+| 작업 브랜치 → `main` | Squash | 0명 | `ci-frontend` `pr-title` |
 
+- 브랜치는 `main` 하나만 씁니다(develop 없음). 머지된 작업 브랜치는 자동 삭제됩니다.
 - 해커톤(48시간)이라 승인은 0명으로 둡니다. 대신 CI 가 통과해야 머지됩니다.
 - 급한 수정은 레포 관리자(Admin)가 규칙을 우회할 수 있습니다.
 - 필수 체크 워크플로에는 `paths` 필터를 걸지 않습니다. 걸면 체크가 "대기 중"으로 남아 머지가 막힙니다.

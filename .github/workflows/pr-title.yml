@@ -1,11 +1,11 @@
 name: PR Title
 
-# squash 머지 시 PR 제목이 그대로 develop 커밋 메시지가 됩니다.
+# squash 머지 시 PR 제목이 그대로 main 커밋 메시지가 됩니다.
 # 형식이 깨진 제목이 커밋 히스토리에 남지 않도록 머지 전에 검사합니다.
 # 필수 체크로 쓰므로 paths 필터를 걸지 않습니다.
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     # 제목만 고쳐도(edited) 다시 검사합니다.
     types: [ opened, edited, synchronize, reopened ]
 

@@ -2,7 +2,7 @@
 제목 형식: Type: 설명   (범위를 적으려면 Type(범위): 설명)
 예) Feat: 조립기 계산 API 구현 / Docs: 협업 규칙 문서화
 Type: Feat, Fix, Refactor, Chore, Docs, Test
-squash 머지 시 PR 제목이 그대로 develop 커밋 메시지가 됩니다. (PR Title 체크가 형식을 검사합니다)
+squash 머지 시 PR 제목이 그대로 main 커밋 메시지가 됩니다. (PR Title 체크가 형식을 검사합니다)
 -->
 ## Issue Number
 <!-- close #이슈번호 -->
