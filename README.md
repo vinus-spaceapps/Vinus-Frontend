@@ -40,7 +40,10 @@ src/
   lib/types.ts           응답 타입
   lib/catalog.tsx        변수·산지·AI 상태 (앱 시작 때 1회)
   lib/selection.tsx      바구니·지역·기간 선택 상태, 분석 URL 변환
+  theme.ts               다크/라이트 테마 전환, 그래프용 색 토큰
+  styles.css             디자인 토큰(:root / [data-theme="light"])과 전체 스타일
 ```
 
-- 차트: Recharts, 지도: Leaflet + OpenStreetMap 타일
+- 차트: Recharts, 지도: Leaflet + Esri 그레이 베이스맵(키 불필요, 테마에 따라 다크/라이트)
+- 화면: 검정(또는 라이트) 바탕에 강조색은 전경색 하나. 색은 데이터(추세 방향·GST 등급)에만 쓰고, 지도 위에 떠 있는 요소는 유리(.glass)
 - 지금 결과는 백엔드의 예시 데이터(목업)라 화면에 "예시 데이터" 배지가 붙습니다.
