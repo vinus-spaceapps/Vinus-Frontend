@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { AnalyzeQuery, Decision, InsightCard, NextStepChange } from "../lib/types";
 import ChatPanel from "./ChatPanel";
@@ -16,6 +16,7 @@ interface Props {
   aiEnabled: boolean;
   onApply: (change: NextStepChange, varId: string) => void;
   onClose: () => void;
+  current?: string; // 본문에서 보고 있는 변수: 바뀌면 AI 도 그 변수 기준으로
 }
 
 const EXAMPLES = ["2020년 영향", "신뢰구간 뜻", "우리 밭 적용 여부", "다른 산지와 비교"];
@@ -37,11 +38,14 @@ function SourceBadge({ source, unverified }: { source: string; unverified: strin
 }
 
 // ④ 인사이트 AI: 엔진 결과를 생산자 말로 풀고, 다음에 볼 것을 버튼으로 제안.
-export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose }: Props) {
+export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose, current }: Props) {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const [decision, setDecision] = useState<string | null>(null);
-  const [varId, setVarId] = useState(vars[0]?.id ?? "");
+  const [varId, setVarId] = useState(current ?? vars[0]?.id ?? "");
+  useEffect(() => {
+    if (current) setVarId(current);
+  }, [current]);
   const activeVar = vars.find((v) => v.id === varId) ? varId : vars[0]?.id;
   const varName = vars.find((v) => v.id === activeVar)?.name ?? "";
 
