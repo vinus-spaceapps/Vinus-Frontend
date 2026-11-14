@@ -5,11 +5,13 @@ import Landing from "./pages/Landing";
 import VariablePicker from "./pages/VariablePicker";
 import RegionSetup from "./pages/RegionSetup";
 import Analysis from "./pages/Analysis";
+import { setTheme, useTheme } from "./theme";
 
 function Header() {
   const { pathname } = useLocation();
   const { health } = useCatalog();
   const { sel } = useSelection();
+  const theme = useTheme();
   const steps = [
     { to: "/variables", n: 1, label: "변수 고르기", enabled: true },
     { to: "/region", n: 2, label: "지역 설정", enabled: sel.basket.length > 0 },
@@ -44,6 +46,14 @@ function Header() {
             AI {health.ai.enabled ? "켜짐" : "꺼짐 · 규칙 기반"}
           </span>
         )}
+        <div className="seg theme-seg" role="group" aria-label="화면 테마">
+          <button aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}>
+            다크
+          </button>
+          <button aria-pressed={theme === "light"} onClick={() => setTheme("light")}>
+            라이트
+          </button>
+        </div>
       </div>
     </header>
   );

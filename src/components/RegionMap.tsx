@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { TONE_COLOR, TONE_LABEL, trendTone } from "../lib/format";
 import type { Region, RegionComparison } from "../lib/types";
+import { useTheme } from "../theme";
 
 interface Props {
   regions: Region[];
@@ -47,6 +48,7 @@ function WheelOnClick() {
 
 export default function RegionMap({ regions, selected, onSelect, comparison, unit }: Props) {
   const sel = regions.find((r) => r.id === selected);
+  const theme = useTheme();
   // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼워 위성 등장 효과가 반복되므로 고정
   const icons = useMemo(
     () =>
@@ -54,7 +56,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
         regions.map((r) => {
           const c = comparison?.find((x) => x.region_id === r.id);
           const isSel = r.id === selected;
-          const color = c ? TONE_COLOR[trendTone(c.status, c.direction)] : isSel ? "#fff" : "rgb(255 255 255 / .45)";
+          const color = c ? TONE_COLOR[trendTone(c.status, c.direction)] : isSel ? "var(--fg)" : "rgb(var(--fg-rgb) / .45)";
           const sub = c ? `${c.label} · 10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : r.country;
           return [r.id, orbitIcon(color, isSel, r.name, sub)];
         }),
@@ -66,8 +68,9 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
     <>
       <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false}>
         <TileLayer
-          // CARTO 다크 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 다크 그레이 베이스맵 사용
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          // CARTO 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 그레이 베이스맵 (테마에 맞춰 다크/라이트)
+          key={theme}
+          url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${theme === "light" ? "Light" : "Dark"}_Gray_Base/MapServer/tile/{z}/{y}/{x}`}
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
