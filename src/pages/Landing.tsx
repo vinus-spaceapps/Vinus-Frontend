@@ -103,7 +103,7 @@ export default function Landing() {
         <h2 className="section-h">시연 예시</h2>
         <section className="demo-grid">
           {DEMOS.map((d) => (
-            <button key={d.where} className="demo-card" onClick={() => openDemo(d)}>
+            <button key={d.where} className="glass demo-card" onClick={() => openDemo(d)}>
               <span className="where">{d.where}</span>
               <span className="q">{d.q}</span>
               <span className="muted small">{d.who}</span>

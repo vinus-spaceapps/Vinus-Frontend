@@ -28,7 +28,7 @@ const CELLS: { key: keyof InsightCard; title: string }[] = [
 function SourceBadge({ source, unverified }: { source: string; unverified: string[] }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span className={`badge ${source === "llm" ? "badge-ai" : "badge-fallback"}`}>{source === "llm" ? "Claude" : "규칙 기반"}</span>
+      <span className={`badge ${source === "llm" ? "" : "warn"}`}>{source === "llm" ? "Claude" : "규칙 기반"}</span>
       {unverified.length > 0 && <span className="warn-line">엔진 결과에 없는 숫자 포함: {unverified.join(", ")} (확인 필요)</span>}
     </div>
   );

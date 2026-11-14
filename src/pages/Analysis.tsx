@@ -120,7 +120,7 @@ export default function Analysis() {
           <div className="card summary-bar">
             <div className="grp">
               {params.variables.map((id) => (
-                <span className="chip" key={id}>
+                <span className="chip tag" key={id}>
                   {variables.find((v) => v.id === id)?.name ?? id}
                   {params.variables.length > 1 && (
                     <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
@@ -164,7 +164,7 @@ export default function Analysis() {
             </div>
             {loading && <span className="spinner" />}
             {data?.is_mock && (
-              <span className="badge badge-mock" style={{ marginLeft: "auto" }}>
+              <span className="demo-flag" style={{ marginLeft: "auto", alignSelf: "center" }}>
                 예시 데이터 · 실제 관측 아님
               </span>
             )}

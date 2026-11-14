@@ -30,11 +30,11 @@ export default function VerdictCard({ r, region, onThreshold }: Props) {
         <span className="where">
           {region.name} · {v.name} · {r.start}~{r.end}
         </span>
-        <span className={`badge ${r.is_mock ? "badge-mock" : "badge-real"}`} title={r.source_note}>
+        <span className={r.is_mock ? "demo-flag" : "badge"} title={r.source_note}>
           {r.is_mock ? "예시 데이터" : "NASA 집계"}
         </span>
       </div>
-      <div className="label">{st.verdict.label}</div>
+      <div className="v-label">{st.verdict.label}</div>
       <div className="rate">
         10년에 {signed(st.slope_per_decade)}
         {unit}
@@ -76,7 +76,7 @@ export default function VerdictCard({ r, region, onThreshold }: Props) {
         <div className="threshold-row">
           <span className="muted">기준값</span>
           {v.threshold_options.map((o) => (
-            <button key={o} className={r.threshold === o ? "on" : ""} onClick={() => onThreshold(o)}>
+            <button key={o} className="chip" aria-pressed={r.threshold === o} onClick={() => onThreshold(o)}>
               {o}
               {v.threshold_unit}
             </button>

@@ -30,7 +30,7 @@ export default function ChatPanel({ title, subtitle, onClose, children, onSend, 
   };
 
   return (
-    <aside className="card chat" aria-label={title}>
+    <aside className="glass chat" aria-label={title}>
       <div className="chat-head">
         <div>
           <h3>{title}</h3>

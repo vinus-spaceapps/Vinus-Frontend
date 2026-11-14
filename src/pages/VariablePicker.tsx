@@ -72,12 +72,12 @@ export default function VariablePicker() {
             </div>
           </div>
 
-          <div className="tabs" role="tablist">
-            <button className={`tab ${tab === "all" ? "active" : ""}`} onClick={() => setTab("all")}>
+          <div className="seg tabs" role="group" aria-label="카테고리">
+            <button aria-pressed={tab === "all"} onClick={() => setTab("all")}>
               전체
             </button>
             {categories.map((c) => (
-              <button key={c.id} className={`tab ${tab === c.id ? "active" : ""}`} onClick={() => setTab(c.id)}>
+              <button key={c.id} aria-pressed={tab === c.id} onClick={() => setTab(c.id)}>
                 {c.name}
               </button>
             ))}
@@ -96,7 +96,7 @@ export default function VariablePicker() {
             <div className="chips">
               {sel.basket.length === 0 && <span className="muted small">아직 비어 있어요. 카드를 누르거나 AI에게 걱정을 말해 보세요.</span>}
               {sel.basket.map((id) => (
-                <span className="chip" key={id}>
+                <span className="chip tag" key={id}>
                   {variables.find((v) => v.id === id)?.name ?? id}
                   <button onClick={() => removeVar(id)} aria-label="바구니에서 빼기">
                     ×
@@ -128,7 +128,7 @@ export default function VariablePicker() {
                 {m.meta && m.meta.add.length > 0 && (
                   <div className="added">
                     {m.meta.add.map((a) => (
-                      <span key={a.id} className="badge badge-ai">
+                      <span key={a.id} className="badge">
                         + {a.name}
                       </span>
                     ))}
@@ -136,7 +136,7 @@ export default function VariablePicker() {
                 )}
                 {m.meta && (
                   <div className="src">
-                    <span className={`badge ${m.meta.source === "llm" ? "badge-ai" : "badge-fallback"}`}>{m.meta.source === "llm" ? "Claude" : "규칙 기반"}</span>
+                    <span className={`badge ${m.meta.source === "llm" ? "" : "warn"}`}>{m.meta.source === "llm" ? "Claude" : "규칙 기반"}</span>
                   </div>
                 )}
               </div>
@@ -144,7 +144,7 @@ export default function VariablePicker() {
             {msgs.length === 1 && (
               <div className="chat-suggest">
                 {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => send(s)}>
+                  <button key={s} className="chip" onClick={() => send(s)}>
                     {s}
                   </button>
                 ))}

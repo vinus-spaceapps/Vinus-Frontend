@@ -10,8 +10,6 @@ function Header() {
   const { pathname } = useLocation();
   const { health } = useCatalog();
   const { sel } = useSelection();
-  const order = ["/variables", "/region", "/analyze"];
-  const cur = order.indexOf(pathname);
   const steps = [
     { to: "/variables", n: 1, label: "변수 고르기", enabled: true },
     { to: "/region", n: 2, label: "지역 설정", enabled: sel.basket.length > 0 },
@@ -25,16 +23,16 @@ function Header() {
           Vinus <small>와인 기후 추세 탐정</small>
         </Link>
         {pathname !== "/" && (
-          <nav className="steps" aria-label="진행 단계">
-            {steps.map((s, i) =>
+          <nav className="seg steps" aria-label="진행 단계">
+            {steps.map((s) =>
               s.enabled ? (
-                <NavLink key={s.to} to={s.to} className={`step ${i === cur ? "active" : i < cur ? "done" : ""}`}>
-                  <span className="num">{s.n}</span>
+                <NavLink key={s.to} to={s.to}>
+                  <span className="n num">{s.n}</span>
                   <span className="txt">{s.label}</span>
                 </NavLink>
               ) : (
-                <span key={s.to} className="step">
-                  <span className="num">{s.n}</span>
+                <span key={s.to} aria-disabled="true">
+                  <span className="n num">{s.n}</span>
                   <span className="txt">{s.label}</span>
                 </span>
               ),
@@ -42,7 +40,7 @@ function Header() {
           </nav>
         )}
         {health && (
-          <span className={`ai-pill ${health.ai.enabled ? "on" : ""}`} title={health.ai.enabled ? health.ai.model : health.ai.reason}>
+          <span className={`badge ${health.ai.enabled ? "" : "warn"}`} title={health.ai.enabled ? health.ai.model : health.ai.reason}>
             AI {health.ai.enabled ? "켜짐" : "꺼짐 · 규칙 기반"}
           </span>
         )}
