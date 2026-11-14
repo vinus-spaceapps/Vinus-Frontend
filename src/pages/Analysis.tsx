@@ -4,6 +4,7 @@ import InsightPanel from "../components/InsightPanel";
 import { Card, DoughnutCard, HeatmapCard, KpiRow, RegionBarsCard, TrendCard, ValidationCard } from "../components/DashCards";
 import Icon from "../components/Icon";
 import RegionMap from "../components/RegionMap";
+import Stripes from "../components/Stripes";
 import VerdictCard from "../components/VerdictCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
@@ -128,13 +129,14 @@ export default function Analysis() {
 
   return (
     <main>
-      {/* Starwave 에피소드 머리: 행성 띠 위에 큰 제목 + 오른쪽 흰 버튼 */}
+      {/* 머리: 지금 보는 지표의 기후 줄무늬(한 줄 = 한 해, 밝을수록 값이 큰 해) 위에 큰 제목 + 오른쪽 흰 버튼 */}
       <header className="ep-hero">
-        <div className="ep-hero-art" aria-hidden>
-          <span className="band b1" />
-          <span className="band b2" />
-          <span className="band b3" />
-        </div>
+        {shown && <Stripes values={shown.series.map((p) => p.value)} className="ep-stripes" />}
+        {shown && (
+          <p className="stripes-note">
+            배경 줄무늬: {shown.variable.name}, {shown.start}–{shown.end}. 밝을수록 값이 큰 해.
+          </p>
+        )}
         <div className="wrap ep-hero-in">
           <div>
             <p className="label">{data?.region.country ?? "분석 결과"}</p>

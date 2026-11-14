@@ -79,7 +79,8 @@ export default function TrendChart({ r }: { r: VariableResult }) {
           <Line dataKey="ols" stroke={t.muted} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} isAnimationActive={false} />
           <Line dataKey="sen" stroke={t.ink} strokeWidth={2.5} dot={false} activeDot={false} isAnimationActive={false} />
           {r.overlay && <Line yAxisId="ov" dataKey="overlay" stroke={t.blue} strokeWidth={2} dot={{ r: 3, fill: t.blue, strokeWidth: 0 }} connectNulls isAnimationActive={false} />}
-          <Tooltip content={<Tip unit={unit} />} cursor={{ fill: "rgb(0 0 0 / 0.04)" }} />
+          {/* 툴팁은 포인터에 바로 붙게 (기본 400ms 미끄러짐 끔), 어두운 바탕용 옅은 흰 커서 */}
+          <Tooltip content={<Tip unit={unit} />} cursor={{ fill: "rgb(255 255 255 / 0.05)" }} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
