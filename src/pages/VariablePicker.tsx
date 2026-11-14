@@ -89,7 +89,7 @@ export default function VariablePicker() {
             ))}
           </div>
 
-          <div className="card basket">
+          <div className="glass basket">
             <span className="lbl">
               분석 바구니 {sel.basket.length}/{BASKET_LIMIT}
             </span>
@@ -154,7 +154,7 @@ export default function VariablePicker() {
         )}
       </div>
       {!open && (
-        <button className="btn btn-primary panel-toggle" onClick={() => setOpen(true)}>
+        <button className="glass panel-toggle" onClick={() => setOpen(true)}>
           ✦ 변수 담기 AI
         </button>
       )}

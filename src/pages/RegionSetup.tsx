@@ -58,9 +58,12 @@ export default function RegionSetup() {
             <input id="region-search" className="search" placeholder="산지 이름 검색 (예: 나파, 영동)" value={q} onChange={(e) => setQ(e.target.value)} />
             <div className="region-list">
               {filtered.map((r) => (
-                <button key={r.id} className={`region-item ${r.id === sel.region ? "sel" : ""}`} onClick={() => set({ region: r.id })}>
+                <button key={r.id} className={`region-item ${r.id === sel.region ? "sel" : ""}`} aria-pressed={r.id === sel.region} onClick={() => set({ region: r.id })}>
                   <b>{r.name}</b>
-                  <span>{r.country}</span>
+                  <span className="ctry">{r.country}</span>
+                  <span className="check" aria-hidden>
+                    ✓
+                  </span>
                 </button>
               ))}
               {filtered.length === 0 && <span className="muted small">찾는 산지가 없어요. 지금은 기본 산지 7곳만 지원합니다.</span>}

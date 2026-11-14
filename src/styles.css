@@ -166,24 +166,30 @@ select:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outlin
 /* ---------- 2단 레이아웃 (본문 + AI 패널) ---------- */
 .with-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
 .with-panel.open { grid-template-columns: minmax(0, 1fr) 380px; }
-.panel-toggle { position: fixed; right: 24px; bottom: 24px; z-index: 900; }
+.panel-toggle { position: fixed; right: 24px; bottom: 24px; z-index: 900; height: 40px; padding: 0 16px; border-radius: 999px; font-weight: 600; cursor: pointer; color: var(--fg); display: inline-flex; align-items: center; gap: 8px; transition: transform 100ms var(--ease-out); }
+.panel-toggle:active { transform: scale(0.97); }
 
 /* ---------- 변수 고르기 ---------- */
 .tabs { margin-bottom: 16px; border: 1px solid var(--line); flex-wrap: wrap; }
 .var-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .var-card { position: relative; text-align: left; padding: 18px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--raise); color: var(--fg); cursor: pointer; transition: border-color 150ms ease, transform 100ms var(--ease-out); display: flex; flex-direction: column; gap: 8px; min-height: 150px; }
 .var-card:active { transform: scale(0.99); }
-.var-card.in { border-color: var(--fg); }
+/* 선택 = 전경색 테두리(바깥 1px 그림자로 2px처럼, 레이아웃 흔들림 없이) + 체크 */
+.var-card.in { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg); }
 .var-card .cat { font-size: 12px; color: var(--muted); }
 .var-card h3 { font-size: 17px; }
 .var-card .meta { margin-top: auto; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .var-card .meta span { border: 1px solid var(--line); padding: 0 7px; border-radius: 6px; }
-.var-card .check { position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: transparent; }
-.var-card.in .check { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.var-card .check { position: absolute; top: 14px; right: 14px; }
+.var-card .check, .region-item .check { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: transparent; }
+.var-card .check, .region-item .check { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; flex: none; }
+.var-card.in .check, .region-item.sel .check { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 @media (hover: hover) and (pointer: fine) { .var-card:not(.in):hover { border-color: var(--faint); } }
-.popover { position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 8px); border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.6; pointer-events: none; opacity: 0; transform: translateY(-4px); transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out); min-width: 300px; color: var(--fg);
+.popover { position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 8px); border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.6; pointer-events: none; display: none; opacity: 0; transform: translateY(-4px); transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out), display 150ms allow-discrete; min-width: 300px; color: var(--fg);
   background: var(--popover); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); border: 1px solid var(--glass-line); box-shadow: inset 0 1px 0 var(--glass-hi), 0 16px 40px rgb(0 0 0 / var(--shadow-a)); }
-.var-card:hover .popover, .var-card:focus-visible .popover { opacity: 1; transform: none; }
+/* 숨겨진 동안은 display:none 이라 마지막 줄 팝오버가 페이지 아래에 빈 스크롤을 만들지 않음 */
+.var-card:hover .popover, .var-card:focus-visible .popover { display: block; opacity: 1; transform: none; }
+@starting-style { .var-card:hover .popover, .var-card:focus-visible .popover { opacity: 0; transform: translateY(-4px); } }
 .var-grid > .var-card:nth-child(4n) .popover { left: auto; }
 .popover h4 { font-size: 14px; margin-bottom: 6px; }
 .popover .lbl { color: var(--muted); font-weight: 600; margin-top: 8px; display: block; }
@@ -191,7 +197,8 @@ select:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outlin
 .popover dt { color: var(--muted); }
 .popover dd { margin: 0; }
 
-.basket { position: sticky; bottom: 16px; margin-top: 24px; padding: 12px 16px; border-radius: 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; z-index: 20; }
+/* 화면 아래에 떠 있는 유리 바. sticky 라 스크롤 끝에서는 카드 그리드 뒤 제자리로 내려앉아 마지막 줄을 가리지 않음 */
+.basket { position: sticky; bottom: 16px; margin-top: 28px; padding: 10px 10px 10px 18px; border-radius: 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; z-index: 20; }
 .basket .lbl { font-weight: 700; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .basket .spacer { flex: 1; }
@@ -219,13 +226,14 @@ select:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outlin
 .region-side { padding: 20px; display: flex; flex-direction: column; gap: 22px; }
 .field-label { font-weight: 700; font-size: 14px; margin-bottom: 8px; display: block; }
 .search { width: 100%; padding: 9px 12px !important; border-radius: 10px !important; }
-.region-list { display: flex; flex-direction: column; gap: 6px; max-height: 210px; overflow-y: auto; margin-top: 8px; }
-.region-item { text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: transparent; cursor: pointer; color: var(--fg); }
-.region-item.sel { border-color: var(--fg); background: var(--fg); color: var(--bg); }
-.region-item.sel span { color: rgb(var(--bg-rgb) / .65); }
+.region-list { display: flex; flex-direction: column; gap: 6px; max-height: 230px; overflow-y: auto; overscroll-behavior: contain; margin-top: 8px; padding: 2px; }
+.region-item { display: flex; align-items: center; gap: 6px; text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px 8px 12px; background: var(--raise); cursor: pointer; color: var(--fg); transition: border-color 150ms ease, transform 100ms var(--ease-out); }
+.region-item:active { transform: scale(0.99); }
+.region-item.sel { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg); }
+.region-item .check { margin-left: auto; }
 @media (hover: hover) and (pointer: fine) { .region-item:not(.sel):hover { border-color: var(--faint); } }
 .region-item b { font-size: 14px; }
-.region-item span { font-size: 12px; color: var(--muted); margin-left: 6px; }
+.region-item .ctry { font-size: 12px; color: var(--muted); }
 .year-row { display: flex; align-items: center; gap: 10px; }
 .range-dual { position: relative; height: 28px; margin-top: 8px; }
 .range-dual input[type="range"] { position: absolute; inset: 0; width: 100%; margin: 0; pointer-events: none; appearance: none; background: transparent; }
@@ -386,5 +394,5 @@ details summary { cursor: pointer; font-weight: 700; font-size: 14px; }
   .hero h1 { font-size: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .popover { transition: opacity 150ms ease; transform: none; }
+  .popover, .var-card:hover .popover { transition: opacity 150ms ease, display 150ms allow-discrete; transform: none; }
 }
