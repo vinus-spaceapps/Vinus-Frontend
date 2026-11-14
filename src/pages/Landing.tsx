@@ -25,22 +25,32 @@ const DEMOS = [
 const DATASETS = ["MODIS", "OMI", "AIRS", "GPM IMERG", "MERRA-2", "GLDAS"];
 
 function HeroVisual() {
-  // 장식용 그림: 해마다 튀는 점 + 위로 기우는 추세선
+  // 장식용 그림: 해마다 튀는 점 + 위로 기우는 추세선. 분석 그래프와 같은 문법(전경색 점·선, 점선 추세, 가장 튄 해만 링)
   const pts = [3, 2, 4, 3, 5, 3, 4, 6, 4, 5, 7, 5, 6, 9, 6, 8, 12, 7, 9, 8, 10, 9, 11];
-  const w = 400, h = 300, pad = 30;
-  const x = (i: number) => pad + (i * (w - 2 * pad)) / (pts.length - 1);
-  const y = (v: number) => h - pad - (v * (h - 2 * pad)) / 14;
+  const peak = pts.indexOf(Math.max(...pts));
+  const w = 400, h = 300, padX = 28, top = 34, bottom = 196; // 아래쪽은 글자 자리
+  const x = (i: number) => padX + (i * (w - 2 * padX)) / (pts.length - 1);
+  const y = (v: number) => bottom - (v * (bottom - top)) / 13;
   return (
     <div className="hero-visual" aria-hidden>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-        <path d={pts.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ")} fill="none" stroke="rgba(255,255,255,.35)" strokeWidth="2" />
-        {pts.map((v, i) => (
-          <circle key={i} cx={x(i)} cy={y(v)} r={4} fill="#fff" opacity={0.85} />
+      <svg viewBox={`0 0 ${w} ${h}`}>
+        {[0, 4, 8, 12].map((v) => (
+          <line key={v} x1={padX} x2={w - padX} y1={y(v)} y2={y(v)} stroke="currentColor" strokeOpacity={0.1} />
         ))}
-        <line x1={x(0)} y1={y(2.6)} x2={x(pts.length - 1)} y2={y(10.6)} stroke="#f2c94c" strokeWidth="3" strokeDasharray="8 6" />
+        <path d={pts.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ")} fill="none" stroke="currentColor" strokeOpacity={0.3} strokeWidth={1.5} />
+        <line x1={x(0)} y1={y(2.6)} x2={x(pts.length - 1)} y2={y(10.6)} stroke="currentColor" strokeWidth={2.5} strokeDasharray="8 6" strokeLinecap="round" />
+        {pts.map((v, i) =>
+          i === peak ? (
+            <circle key={i} cx={x(i)} cy={y(v)} r={6} fill="var(--raise)" stroke="currentColor" strokeWidth={2} />
+          ) : (
+            <circle key={i} cx={x(i)} cy={y(v)} r={3.5} fill="currentColor" />
+          ),
+        )}
       </svg>
-      <span className="hv-label">로그 밸리 · 수확기 연기 노출일수 (예시)</span>
-      <span className="hv-value">증가, 유의함 · 10년에 +4일</span>
+      <span className="hv-label">로그 밸리 · 수확기 연기 노출일수</span>
+      <span className="hv-value">
+        10년에 +4일 <span className="badge sig">유의함</span> <span className="demo-flag">예시</span>
+      </span>
     </div>
   );
 }

@@ -143,16 +143,20 @@ select:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outlin
 .hero h1 { font-size: 46px; font-weight: 800; line-height: 1.15; letter-spacing: -0.045em; }
 .hero h1 em { font-style: normal; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
 .hero .lead { font-size: 17px; color: var(--muted); margin: 18px 0 28px; max-width: 560px; }
-.hero-visual { aspect-ratio: 4 / 3; border-radius: 20px; background: var(--raise); border: 1px solid var(--line); position: relative; overflow: hidden; padding: 28px; display: flex; flex-direction: column; justify-content: flex-end; }
+.hero-visual { aspect-ratio: 4 / 3; border-radius: 20px; background: var(--raise); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgb(255 255 255 / .04), 0 24px 64px rgb(0 0 0 / var(--shadow-a)); color: var(--fg); position: relative; overflow: hidden; padding: 24px 28px; display: flex; flex-direction: column; justify-content: flex-end; }
 .hero-visual svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hero-visual .hv-label { position: relative; font-size: 13px; color: var(--muted); }
-.hero-visual .hv-value { position: relative; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.hero-visual .hv-value { position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 24px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.hero-visual .hv-value .demo-flag { align-self: center; }
 .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0 48px; }
 .how .card { padding: 20px; }
 .how .n { color: var(--muted); font-weight: 700; font-size: 12px; letter-spacing: .04em; }
 .how h3 { font-size: 18px; margin: 6px 0; }
 .section-h { font-size: 20px; margin-bottom: 14px; }
 .demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+/* 유리 카드가 굴절할 거리: 그리드 뒤에 옅은 빛 번짐 */
+.demo-grid { position: relative; isolation: isolate; }
+.demo-grid::before { content: ""; position: absolute; z-index: -1; inset: -48px 8%; background: radial-gradient(closest-side, var(--glow), transparent); filter: blur(8px); pointer-events: none; }
 .demo-card { padding: 20px; text-align: left; cursor: pointer; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; color: var(--fg); transition: transform 100ms var(--ease-out), border-color 150ms ease; }
 .demo-card:active { transform: scale(0.99); }
 @media (hover: hover) and (pointer: fine) { .demo-card:hover { border-color: var(--faint); } }
