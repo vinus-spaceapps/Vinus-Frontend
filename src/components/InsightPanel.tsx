@@ -108,7 +108,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
             </select>
           )}
           {items.length > 0 && (
-            <button className="btn pill sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
+            <button className="btn primary sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
               ✦ 인사이트 보기
             </button>
           )}
@@ -123,7 +123,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
             <br />
             통계 엔진이 계산한 수치만 사용
           </p>
-          <button className="btn pill" onClick={() => requestCard(decision)}>
+          <button className="btn primary" onClick={() => requestCard(decision)}>
             ✦ 인사이트 보기
           </button>
           <div className="chat-suggest">

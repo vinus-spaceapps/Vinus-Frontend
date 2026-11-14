@@ -287,7 +287,7 @@ export function TrendCard({ r, region }: { r: VariableResult; region: Region }) 
                   { label: "가장 큰 해", color: "var(--w3)" },
                 ]
               : [{ label: "해마다 값", color: "var(--w3)", kind: "line" as const }]),
-            { label: "Sen 추세", color: "var(--dark)", kind: "line" },
+            { label: "Sen 추세", color: "var(--text)", kind: "line" },
             { label: "OLS 추세", color: "var(--muted)", kind: "dash" },
             ...(r.overlay ? [{ label: r.overlay.label, color: "var(--good)", kind: "line" as const }] : []),
           ]}

@@ -97,8 +97,8 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
     <>
       <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false} zoomControl={false}>
         <TileLayer
-          // CARTO 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 라이트 그레이 베이스맵 (CSS 로 살짝 와인빛)
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          // 키 없이 쓰는 Esri 다크 그레이 베이스맵 (어두운 화면에 맞춤)
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
@@ -112,7 +112,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
               [sel.bbox[0], sel.bbox[2]],
               [sel.bbox[1], sel.bbox[3]],
             ]}
-            pathOptions={{ color: "#8c3b55", weight: 2, dashArray: "6 5", fillColor: "#8c3b55", fillOpacity: 0.06 }}
+            pathOptions={{ color: "#f399b3", weight: 1.5, dashArray: "5 5", fillColor: "#f399b3", fillOpacity: 0.08 }}
             interactive={false}
           />
         )}

@@ -24,12 +24,12 @@ function parseCsv(text: string): YearValue[] {
   return out;
 }
 
-// Figma "Full charts components" 카드로 짠 결과 화면: 핵심 숫자 4장 → 카드 격자(넓은 추세 카드는 2칸).
+// 결과 화면: Starwave 에피소드 상세 구성 (행성 띠 머리 → 위에 붙는 바 → 판정 문장 → 핵심 숫자 → 자료 칸들 → 다른 산지 링크).
 // 인사이트 AI(RAG)는 오른쪽 사이드바.
 export default function Analysis() {
   const { search } = useLocation();
   const nav = useNavigate();
-  const { variables, families, regions, health } = useCatalog();
+  const { variables, families, categories, regions, health } = useCatalog();
   const { sel, set } = useSelection();
   const params = useMemo(() => fromSearch(search), [search]);
 
@@ -120,106 +120,133 @@ export default function Analysis() {
     }
   };
 
-  const today = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+  const regionName = data?.region.name ?? regions.find((r) => r.id === params.region)?.name ?? "분석 결과";
+  const catName = shown ? categories.find((c) => c.id === shown.variable.category)?.name : null;
+  // 맨 아래 '다른 산지' 링크: 목록에서 다음 산지
+  const ri = regions.findIndex((r) => r.id === params.region);
+  const nextRegion = regions.length > 1 ? regions[(ri + 1) % regions.length] : null;
 
   return (
-    <main className="page an-page">
-      <div className={`with-panel ${panel ? "open" : ""}`}>
-        <div className="an-main">
-          {/* 머리: 큰 제목 + 날짜 / 오른쪽 Forms 입력(회색 알약) + 인사이트 AI 버튼(둥근 아이콘) */}
-          <header className="dash-head">
-            <div className="dash-titles">
-              <h1>{data?.region.name ?? regions.find((r) => r.id === params.region)?.name ?? "분석 결과"}</h1>
-              <p>
-                {data?.region.country ? `${data.region.country} · ` : ""}
-                {today}
-              </p>
-            </div>
-            <div className="dash-tools">
-              <label className="input pill">
-                <Icon name="pin" size={18} />
-                <select value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
-                  {regions.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="input pill">
-                <Icon name="calendar" size={18} />
-                <select value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
-                  {YEARS.map((y) => (
-                    <option key={y}>{y}</option>
-                  ))}
-                </select>
-                <span className="muted">–</span>
-                <select value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
-                  {YEARS.map((y) => (
-                    <option key={y}>{y}</option>
-                  ))}
-                </select>
-              </label>
-              <button ref={openBtn} className="ic big" aria-pressed={panel} aria-label="인사이트 AI" title="인사이트 AI" onClick={() => setPanel((p) => !p)}>
-                <Icon name="comment" size={24} />
-              </button>
-            </div>
-          </header>
-
-          {/* 볼 변수: 알약 칩 (고른 것만 진하게) + 빼기, 끝에 + 변수 (묶음별로) */}
-          <div className="var-row">
-            <div className="seg" role="group" aria-label="볼 변수">
-              {params.variables.map((id) => {
-                const name = variables.find((v) => v.id === id)?.name ?? id;
-                const on = shown ? shown.variable.id === id : id === params.variables[0];
-                return (
-                  <span key={id} className="tab-chip" {...(on ? { "data-on": "" } : {})}>
-                    <button onClick={() => setActive(id)} aria-pressed={on}>
-                      {name}
-                    </button>
-                    {params.variables.length > 1 && (
-                      <button className="x" onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label={`${name} 빼기`}>
-                        <Icon name="close" size={14} />
-                      </button>
-                    )}
-                  </span>
-                );
-              })}
-              {params.variables.length < BASKET_LIMIT && (
-                <select className="tab-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
-                  <option value="">+ 변수</option>
-                  {families.map((f) => (
-                    <optgroup key={f.id} label={f.name}>
-                      {addable
-                        .filter((v) => v.family === f.id)
-                        .map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name}
-                          </option>
-                        ))}
-                    </optgroup>
-                  ))}
-                </select>
+    <main>
+      {/* Starwave 에피소드 머리: 행성 띠 위에 큰 제목 + 오른쪽 흰 버튼 */}
+      <header className="ep-hero">
+        <div className="ep-hero-art" aria-hidden>
+          <span className="band b1" />
+          <span className="band b2" />
+          <span className="band b3" />
+        </div>
+        <div className="wrap ep-hero-in">
+          <div>
+            <p className="label">{data?.region.country ?? "분석 결과"}</p>
+            <h1>
+              {regionName}
+              {shown && (
+                <>
+                  <br />
+                  {shown.variable.name}
+                </>
               )}
-            </div>
-            {loading && <span className="spinner" aria-label="계산 중" />}
-            {data?.is_mock && (
-              <span className="pill-sm warn" title="실제 집계가 아직 없어 예시 값으로 계산">
-                예시 데이터 포함
-              </span>
+            </h1>
+          </div>
+          <button ref={openBtn} className="btn primary" aria-pressed={panel} onClick={() => setPanel((p) => !p)}>
+            <Icon name="comment" size={16} />
+            {panel ? "AI 해설 닫기" : "AI 해설"}
+          </button>
+        </div>
+      </header>
+
+      {/* 위에 붙는 바: 볼 변수 칩 + 산지·기간 */}
+      <div className="sticky-bar">
+        <div className="wrap sticky-in">
+          <div className="chips" role="group" aria-label="볼 변수">
+            {params.variables.map((id) => {
+              const name = variables.find((v) => v.id === id)?.name ?? id;
+              const on = shown ? shown.variable.id === id : id === params.variables[0];
+              return (
+                <span key={id} className="tab-chip" {...(on ? { "data-on": "" } : {})}>
+                  <button onClick={() => setActive(id)} aria-pressed={on}>
+                    {name}
+                  </button>
+                  {params.variables.length > 1 && (
+                    <button className="x" onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label={`${name} 빼기`}>
+                      <Icon name="close" size={14} />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+            {params.variables.length < BASKET_LIMIT && (
+              <select className="tab-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
+                <option value="">+ 변수</option>
+                {families.map((f) => (
+                  <optgroup key={f.id} label={f.name}>
+                    {addable
+                      .filter((v) => v.family === f.id)
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
             )}
           </div>
+          <span className="spacer" />
+          {loading && <span className="spinner" aria-label="계산 중" />}
+          <label className="input sm">
+            <Icon name="pin" size={16} />
+            <select value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
+              {regions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="input sm">
+            <Icon name="calendar" size={16} />
+            <select value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
+              {YEARS.map((y) => (
+                <option key={y}>{y}</option>
+              ))}
+            </select>
+            <span className="muted">–</span>
+            <select value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
+              {YEARS.map((y) => (
+                <option key={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
 
+      <div className={`wrap with-panel ${panel ? "open" : ""}`}>
+        <div className="an-main">
           {error && <div className="error-box block-gap">{error}</div>}
           {notice && <div className="flag block-gap">{notice}</div>}
           {!data && !error && (
             <div className="empty">
-              <span className="spinner" /> 분석 중…
+              <span className="spinner" /> 계산 중
             </div>
           )}
 
           {data && shown && (
             <div className="results" aria-busy={loading} {...(loading ? { "data-stale": "" } : {})}>
+              {/* 에피소드 소개 칸: 태그·기간 + 판정 문장 */}
+              <section className="statement">
+                <div className="meta">
+                  {catName && <span className="tag">{catName}</span>}
+                  <span className="num">
+                    {shown.start}–{shown.end}
+                  </span>
+                  <span className="num">{shown.stats.n}년</span>
+                  <span>{shown.variable.dataset}</span>
+                  {shown.is_mock && <span className="tag warn">예시 데이터</span>}
+                </div>
+                <p>{shown.verdict_text}</p>
+              </section>
+
               <KpiRow r={shown} />
 
               <div className="dash">
@@ -241,7 +268,7 @@ export default function Analysis() {
                   </div>
                 </Card>
                 {data.validation && <ValidationCard v={data.validation} variable={shown.variable} />}
-                <Card title="내 기록 겹치기" desc="연도,값 형식 CSV (예: 수확량, 서리 피해율). 상관관계는 인과관계가 아님." footer={<p className="card-note">{data.region.blurb}. {data.resolution_note}</p>}>
+                <Card className="glow-card" title="내 기록 겹치기" desc="연도,값 형식 CSV (예: 수확량, 서리 피해율). 상관관계는 인과관계가 아닙니다." footer={<p className="card-note">{data.region.blurb}. {data.resolution_note}</p>}>
                   <label className="input">
                     <span className="muted">이름</span>
                     <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} />
@@ -269,14 +296,14 @@ export default function Analysis() {
                         e.target.value = ""; // 같은 파일을 다시 골라도 반영되게
                       }}
                     />
-                    <span className="btn outline-pill sm" aria-hidden>
+                    <span className="btn secondary sm" aria-hidden>
                       파일 선택
                     </span>
                     <span className={`drop-name ${fileName ? "" : "muted"}`}>{fileName ?? "또는 여기에 끌어 놓기"}</span>
                   </label>
                   {userSeries && (
                     <button
-                      className="btn pill sm"
+                      className="btn secondary sm"
                       onClick={() => {
                         setUserSeries(null);
                         setFileName(null);
@@ -287,6 +314,12 @@ export default function Analysis() {
                   )}
                 </Card>
               </div>
+
+              {nextRegion && (
+                <button className="next-link" onClick={() => update({ region: nextRegion.id })}>
+                  같은 지표로 {nextRegion.name} 보기 ›
+                </button>
+              )}
             </div>
           )}
         </div>

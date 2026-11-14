@@ -10,25 +10,24 @@ interface Props {
 
 const AGG = { count: "날수", sum: "합계", mean: "평균", min: "최솟값", max: "최댓값" } as const;
 
-// 핵심 지표 카드 (Figma card: 머리 25 + 둥근 아이콘 40 / 설명 / 알약 칩). 마우스·초점을 주면 지표 md 설명 팝오버.
+// 핵심 지표 카드 (Starwave 에피소드 카드: 태그 + 오른쪽 메타 / 제목 / 설명 / 흰 버튼). 마우스·초점을 주면 지표 md 설명 팝오버.
 export default function VariableCard({ v, category, inBasket, onToggle }: Props) {
   return (
-    <button className={`card vcard ${inBasket ? "in" : ""}`} onClick={onToggle} aria-pressed={inBasket}>
-      <span className="card-head">
-        <span className="card-titles">
-          <span className="card-meta">{category?.name}</span>
-          <span className="card-title">{v.name}</span>
-        </span>
-        <span className="ic" aria-hidden>
-          <Icon name={inBasket ? "check" : "plus"} size={22} />
-        </span>
+    <button className={`vcard ${inBasket ? "in" : ""}`} onClick={onToggle} aria-pressed={inBasket}>
+      <span className="vcard-meta">
+        <span className="tag">{category?.name}</span>
+        <span>{v.dataset}</span>
       </span>
-      <span className="card-body">
-        <span className="card-desc">{v.short}</span>
-        <span className="seg static">
-          <span>{v.dataset}</span>
-          <span>{AGG[v.aggregation] ?? v.aggregation}</span>
-          {!v.has_real_data && <span className="warn">예시 데이터</span>}
+      <span className="vcard-title">{v.name}</span>
+      <span className="vcard-desc">{v.short}</span>
+      <span className="vcard-foot">
+        <span className={`btn sm ${inBasket ? "secondary" : "primary"}`} aria-hidden>
+          <Icon name={inBasket ? "check" : "plus"} size={16} />
+          {inBasket ? "담음" : "담기"}
+        </span>
+        <span className="muted">
+          {AGG[v.aggregation] ?? v.aggregation}
+          {!v.has_real_data && ", 예시 데이터"}
         </span>
       </span>
       <span className="popover" role="tooltip">
@@ -70,8 +69,8 @@ export function VariableRow({ v, sub, inBasket, onToggle }: { v: Variable; sub: 
           <span>{v.short}</span>
         </span>
         <span className="vrow-meta">{sub}</span>
-        <span className="ic sm" aria-hidden>
-          <Icon name={inBasket ? "check" : "plus"} size={20} />
+        <span className={`sq ${inBasket ? "on" : ""}`} aria-hidden>
+          <Icon name={inBasket ? "check" : "plus"} size={18} />
         </span>
       </button>
     </li>

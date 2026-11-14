@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import Icon, { type IconName } from "./components/Icon";
 import { useCatalog } from "./lib/catalog";
@@ -9,82 +8,85 @@ import RegionSetup from "./pages/RegionSetup";
 import Analysis from "./pages/Analysis";
 
 const STEP_PATHS = ["/variables", "/region", "/analyze"];
+const TICKER = ["NASA 위성·재분석 자료 2001–2026", "산지 7곳", "지표 949개", "Mann-Kendall과 t-검정", "지상 관측소·1km 위성 검증", "AI 해설은 계산된 숫자만"];
 
-// 왼쪽 레일: 로고·처음은 따로, 1→2→3 단계는 한 캡슐 안에서 선으로 이어진 진행 표시.
-// 지나온 단계는 와인색 체크, 지금 단계는 진한 원, 아직 못 가는 단계는 흐리게.
-function Rail() {
+// 위쪽 한 줄 공지 띠 (Starwave 의 announcement ticker). 같은 줄을 두 번 이어 붙여 끊김 없이 흐름
+function Ticker() {
+  const row = TICKER.map((t) => (
+    <span key={t}>
+      <i aria-hidden />
+      {t}
+    </span>
+  ));
+  return (
+    <div className="ticker">
+      <p className="sr-only">{TICKER.join(", ")}</p>
+      <div className="ticker-track" aria-hidden>
+        <div>{row}</div>
+        <div>{row}</div>
+      </div>
+    </div>
+  );
+}
+
+// 아래 떠 있는 독: 로고(처음) · 1 변수 · 2 산지·기간 · 3 결과 + 새 분석. 이름은 마우스·키보드 초점 때 위로 뜸
+function Dock() {
   const { pathname } = useLocation();
   const { sel } = useSelection();
   const cur = STEP_PATHS.indexOf(pathname);
   const canAnalyze = sel.basket.length > 0 && !!sel.region;
-  const steps = [
-    { to: "/variables", label: "변수", icon: "layers" as IconName, enabled: true },
-    { to: "/region", label: "지역·기간", icon: "pin" as IconName, enabled: sel.basket.length > 0 },
+  const steps: { to: string; label: string; icon: IconName; enabled: boolean }[] = [
+    { to: "/variables", label: "1 변수", icon: "layers", enabled: true },
+    { to: "/region", label: "2 산지·기간", icon: "pin", enabled: sel.basket.length > 0 },
     {
       to: canAnalyze ? `/analyze${toSearch({ variables: sel.basket, region: sel.region!, start: sel.start, end: sel.end, thresholds: {} })}` : "/analyze",
-      label: "결과",
-      icon: "bars" as IconName,
+      label: "3 결과",
+      icon: "bars",
       enabled: pathname === "/analyze" || canAnalyze,
     },
   ];
   return (
-    <aside className="rail">
-      <Link to="/" className="rail-logo" aria-label="Vinus 처음 화면">
-        <img src="/logo-mark.png" width={56} height={42} alt="" />
+    <nav className="dock" aria-label="메뉴">
+      <Link to="/" className="dock-item logo" aria-label="처음 화면" {...(pathname === "/" ? { "aria-current": "page" } : {})}>
+        <img src="/logo-mark-rose.png" width={30} height={22} alt="" />
+        <span className="dock-label">처음</span>
       </Link>
-      <Link to="/" className="rail-home" {...(pathname === "/" ? { "aria-current": "page" } : {})}>
-        <span className="rail-home-ic">
-          <Icon name="home" size={22} />
-        </span>
-        <span className="step-label">처음</span>
+      {steps.map((s, i) =>
+        s.enabled ? (
+          <Link key={s.label} to={s.to} className="dock-item" aria-label={s.label} {...(i === cur ? { "aria-current": "step" } : {})}>
+            <Icon name={s.icon} size={20} />
+            <span className="dock-label">{s.label}</span>
+          </Link>
+        ) : (
+          <span key={s.label} className="dock-item" aria-disabled="true" aria-label={`${s.label}, 앞 단계를 먼저 마치세요`} tabIndex={0}>
+            <Icon name={s.icon} size={20} />
+            <span className="dock-label">앞 단계 먼저</span>
+          </span>
+        ),
+      )}
+      <Link to="/variables" className="btn primary dock-cta">
+        <Icon name="plus" size={16} />
+        새 분석
       </Link>
-      <nav className="stepper" aria-label="진행 단계" style={{ "--reached": cur } as CSSProperties}>
-        <ol>
-          {steps.map((s, i) => {
-            const state = i === cur ? "current" : i < cur ? "done" : s.enabled ? "open" : "locked";
-            // Figma Collapsed Nav 처럼 아이콘(24). 지나온 단계는 체크, 이름표에 순서 번호
-            const mark = <Icon name={state === "done" ? "check" : s.icon} size={22} />;
-            return (
-              <li key={s.label} data-state={state} {...(i < cur ? { "data-reached": "" } : {})}>
-                {s.enabled ? (
-                  <Link to={s.to} className="step-node" aria-label={`${i + 1}단계 ${s.label}`} {...(i === cur ? { "aria-current": "step" } : {})}>
-                    {mark}
-                  </Link>
-                ) : (
-                  <span className="step-node" aria-disabled="true" aria-label={`${i + 1}단계 ${s.label}, 앞 단계를 먼저 마치세요`}>
-                    {mark}
-                  </span>
-                )}
-                <span className="step-label" aria-hidden>
-                  {i + 1} {s.label}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-      <Link to="/variables" className="rail-cta" aria-label="새 분석 시작" title="새 분석 시작">
-        <Icon name="plus" size={18} />
-      </Link>
-    </aside>
+    </nav>
   );
 }
 
 export default function App() {
   const { error, loading } = useCatalog();
   return (
-    <div className="shell">
-      <Rail />
-      <div className="shell-main">
+    <>
+      <Ticker />
+      <div className="app">
         {error ? (
-          <div className="page">
+          <div className="wrap">
             <div className="error-box">
-              <b>데이터를 불러올 수 없습니다.</b> {error}
+              <b>자료를 불러오지 못했습니다.</b> {error}
             </div>
           </div>
         ) : loading ? (
-          <div className="page empty">
-            <span className="spinner" /> 불러오는 중…
+          <div className="wrap empty">
+            <span className="spinner" /> 불러오는 중
           </div>
         ) : (
           <Routes>
@@ -96,6 +98,7 @@ export default function App() {
           </Routes>
         )}
       </div>
-    </div>
+      <Dock />
+    </>
   );
 }

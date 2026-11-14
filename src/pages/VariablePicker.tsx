@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ChatPanel from "../components/ChatPanel";
 import { Seg } from "../components/DashCards";
 import Icon from "../components/Icon";
@@ -26,7 +26,8 @@ export default function VariablePicker() {
   const nav = useNavigate();
   const { categories, families, variables, health } = useCatalog();
   const { sel, addVar, removeVar } = useSelection();
-  const [fam, setFam] = useState("core");
+  const [sp] = useSearchParams();
+  const [fam, setFam] = useState(sp.get("f") ?? "core");
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
@@ -76,19 +77,52 @@ export default function VariablePicker() {
   };
 
   return (
-    <main className="page">
-      <div className={`with-panel ${open ? "open" : ""}`}>
-        <section className="picker">
-          <header className="page-title">
-            <h1>변수 고르기</h1>
-            <p>
-              지표 {variables.length}개 중 최대 {BASKET_LIMIT}개. 핵심 지표 카드에 마우스를 올리면 설명이 뜹니다.
-            </p>
-          </header>
+    <main>
+      <header className="page-hero">
+        <div className="page-hero-art" aria-hidden>
+          <span />
+        </div>
+        <div className="wrap">
+          <p className="label">1단계</p>
+          <h1>변수 고르기</h1>
+          <p className="lead">
+            지표 {variables.length}개 중 최대 {BASKET_LIMIT}개. 핵심 지표 카드에 마우스를 올리면 정의와 의미가 뜹니다.
+          </p>
+        </div>
+      </header>
 
-          {/* Forms: 회색 알약 입력 + 검색 아이콘 */}
-          <label className="input pill lg search">
-            <Icon name="search" size={22} />
+      {/* 고른 변수 바: Episode 의 Listen 바처럼 위에 붙어 따라옴 */}
+      <div className="sticky-bar">
+        <div className="wrap sticky-in">
+          <span className="lbl num">
+            선택 {sel.basket.length}/{BASKET_LIMIT}
+          </span>
+          <div className="chips">
+            {sel.basket.length === 0 && <span className="muted">아직 없음</span>}
+            {sel.basket.map((id) => (
+              <span className="tab-chip" key={id}>
+                <span className="t">{variables.find((v) => v.id === id)?.name ?? id}</span>
+                <button className="x" onClick={() => removeVar(id)} aria-label="빼기">
+                  <Icon name="close" size={14} />
+                </button>
+              </span>
+            ))}
+          </div>
+          {notice && <span className="warn-line">{notice}</span>}
+          <span className="spacer" />
+          <button className="btn secondary sm" aria-pressed={open} onClick={() => setOpen((o) => !o)}>
+            <Icon name="comment" size={16} /> 추천 AI
+          </button>
+          <button className="btn primary sm" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
+            다음
+          </button>
+        </div>
+      </div>
+
+      <div className={`wrap with-panel ${open ? "open" : ""}`}>
+        <section className="picker">
+          <label className="input search">
+            <Icon name="search" size={20} />
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름·키워드로 찾기 (예: 서리, 열대야, ETCCDI)" aria-label="지표 검색" />
           </label>
 
@@ -114,7 +148,7 @@ export default function VariablePicker() {
             }}
           />
 
-          {shown.length === 0 && <p className="empty">찾는 지표가 없습니다.</p>}
+          {shown.length === 0 && <p className="empty">찾는 지표가 없습니다. 다른 낱말로 찾아보세요.</p>}
           {asCards ? (
             <div className="var-grid">
               {shown.map((v) => (
@@ -123,7 +157,7 @@ export default function VariablePicker() {
             </div>
           ) : (
             shown.length > 0 && (
-              <section className="card">
+              <>
                 <ul className="vrows">
                   {shown.slice(0, limit).map((v) => (
                     <VariableRow
@@ -136,37 +170,13 @@ export default function VariablePicker() {
                   ))}
                 </ul>
                 {shown.length > limit && (
-                  <footer className="card-foot">
-                    <button className="foot-btn" onClick={() => setLimit((l) => l + PAGE * 2)}>
-                      더 보기 ({shown.length - limit}개 남음)
-                    </button>
-                  </footer>
+                  <button className="btn secondary more" onClick={() => setLimit((l) => l + PAGE * 2)}>
+                    더 보기 ({shown.length - limit}개 남음)
+                  </button>
                 )}
-              </section>
+              </>
             )
           )}
-
-          <div className="card basket">
-            <span className="lbl">
-              선택 {sel.basket.length}/{BASKET_LIMIT}
-            </span>
-            <div className="seg">
-              {sel.basket.length === 0 && <span className="muted">아직 없음</span>}
-              {sel.basket.map((id) => (
-                <span className="tab-chip" key={id}>
-                  <span className="t">{variables.find((v) => v.id === id)?.name ?? id}</span>
-                  <button className="x" onClick={() => removeVar(id)} aria-label="빼기">
-                    <Icon name="close" size={14} />
-                  </button>
-                </span>
-              ))}
-            </div>
-            {notice && <span className="warn-line">{notice}</span>}
-            <span className="spacer" />
-            <button className="btn pill" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
-              다음
-            </button>
-          </div>
         </section>
 
         {open && (
@@ -210,11 +220,6 @@ export default function VariablePicker() {
           </ChatPanel>
         )}
       </div>
-      {!open && (
-        <button className="btn pill panel-toggle" onClick={() => setOpen(true)}>
-          <Icon name="comment" size={18} /> 변수 추천 AI
-        </button>
-      )}
     </main>
   );
 }

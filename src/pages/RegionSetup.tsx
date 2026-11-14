@@ -34,18 +34,24 @@ export default function RegionSetup() {
   };
 
   return (
-    <main className="page">
-      <header className="page-title row">
-        <div>
-          <h1>산지·기간</h1>
-          <p>고른 변수: {picked.map((v) => v!.name).join(", ")}</p>
+    <main>
+      <header className="page-hero">
+        <div className="page-hero-art" aria-hidden>
+          <span />
         </div>
-        <button className="btn outline-pill" onClick={() => nav("/variables")}>
-          변수 바꾸기
-        </button>
+        <div className="wrap page-hero-row">
+          <div>
+            <p className="label">2단계</p>
+            <h1>산지와 기간</h1>
+            <p className="lead">고른 변수: {picked.map((v) => v!.name).join(", ")}</p>
+          </div>
+          <button className="btn secondary" onClick={() => nav("/variables")}>
+            변수 바꾸기
+          </button>
+        </div>
       </header>
 
-      <div className="region-layout">
+      <div className="wrap region-layout">
         <Card className="map-card" title="지도" desc="점을 누르면 그 산지로. 점선 네모는 자료를 평균 내는 범위">
           <div className="map-frame tall">
             <RegionMap regions={regions} selected={sel.region} onSelect={(id) => set({ region: id })} zoom={6} />
@@ -60,20 +66,19 @@ export default function RegionSetup() {
                 return (
                   <li key={r.id}>
                     <button className={`region-item ${on ? "sel" : ""}`} aria-pressed={on} onClick={() => set({ region: r.id })}>
-                      <Media name={r.name} sub={r.country} size={44} option={<span className={on ? "pill dark" : "pill line"}>{on ? "선택됨" : "선택"}</span>} />
+                      <Media name={r.name} sub={r.blurb} size={40} option={<span className={`sq ${on ? "on" : ""}`}>{on ? <Icon name="check" size={18} /> : <Icon name="plus" size={18} />}</span>} />
                     </button>
                   </li>
                 );
               })}
             </ul>
-            {region && <p className="card-note">{region.blurb}</p>}
           </Card>
 
           <Card
             title="기간"
             desc={`${sel.start}–${sel.end}, ${sel.end - sel.start + 1}년`}
             footer={
-              <button className="btn pill lg block" disabled={!sel.region} onClick={go}>
+              <button className="btn primary block" disabled={!sel.region} onClick={go}>
                 {sel.region ? "분석 시작" : "산지를 고르세요"}
               </button>
             }
