@@ -1,10 +1,10 @@
 import { useMemo, useSyncExternalStore } from "react";
 
-// 다크/라이트 테마. 첫 방문은 시스템 설정을 따르고(index.html 의 인라인 스크립트), 고르면 localStorage 에 기억.
+// 다크/라이트 테마. 첫 방문은 라이트(레퍼런스 기본), 고르면 localStorage 에 기억 (index.html 의 인라인 스크립트).
 export type Theme = "dark" | "light";
 
 const root = document.documentElement;
-const read = (): Theme => (root.dataset.theme === "light" ? "light" : "dark");
+const read = (): Theme => (root.dataset.theme === "dark" ? "dark" : "light");
 const subscribe = (cb: () => void) => {
   const mo = new MutationObserver(cb);
   mo.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
@@ -19,7 +19,7 @@ export function useTokens() {
   return useMemo(() => {
     const s = getComputedStyle(root);
     const g = (n: string) => s.getPropertyValue(n).trim();
-    return { fg: g("--fg"), bg: g("--bg"), muted: g("--muted"), faint: g("--faint"), line: g("--line"), overlay: g("--c1") };
+    return { fg: g("--fg"), bg: g("--bg"), card: g("--card-solid"), chip: g("--chip"), muted: g("--muted"), faint: g("--faint"), line: g("--line"), none: g("--none"), cool: g("--cool") };
   }, [theme]);
 }
 

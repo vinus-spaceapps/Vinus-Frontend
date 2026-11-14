@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import InsightPanel from "../components/InsightPanel";
-import ResultFrame from "../components/ResultFrame";
+import { CardHead, FlowCard, PeriodPill, RegionTrendCard, TrendCard } from "../components/DashCards";
+import Icon from "../components/Icon";
+import RegionMap from "../components/RegionMap";
 import VerdictCard from "../components/VerdictCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
-import { wideScreen } from "../lib/format";
+import { pText, signed, wideScreen } from "../lib/format";
 import { BASKET_LIMIT, DATA_START, DEFAULT_END, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
 import type { AnalysisResponse, AnalyzeQuery, NextStepChange, YearValue } from "../lib/types";
 
@@ -22,7 +24,8 @@ function parseCsv(text: string): YearValue[] {
   return out;
 }
 
-// 위에 필터 툴바, 본문은 변수 하나씩(핵심 숫자 → 그래프·지도·표 틀 → 검정 상세), 인사이트 AI(RAG)는 오른쪽 사이드바.
+// 대시보드 레퍼런스: 큰 제목 + 조건 줄(왼쪽), 핵심 숫자 셋(오른쪽) → 2×2 카드(산지별 게이지 | 열 지도 / 기간별 흐름 | 연도별 추세)
+// → 검정 상세·내 기록. 인사이트 AI(RAG)는 오른쪽 사이드바.
 export default function Analysis() {
   const { search } = useLocation();
   const nav = useNavigate();
@@ -117,66 +120,95 @@ export default function Analysis() {
     }
   };
 
-  return (
-    <main className="container page an-page">
-      {/* 필터 툴바: 대시보드의 메인 조작. 줄바꿈 대신 가로 스크롤이라 구분선이 줄 머리에 남지 않음 */}
-      <div className="glass toolbar" role="toolbar" aria-label="분석 조건">
-        <div className="tb-group">
-          {params.variables.map((id) => (
-            <span className="chip tag" key={id}>
-              {variables.find((v) => v.id === id)?.name ?? id}
-              {params.variables.length > 1 && (
-                <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
-                  ×
-                </button>
-              )}
-            </span>
-          ))}
-          {params.variables.length < BASKET_LIMIT && (
-            <select className="chip-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
-              <option value="">+ 변수</option>
-              {addable.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        <div className="tb-group">
-          <select className="chip-select" value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="tb-group">
-          <select className="chip-select" value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
-            {YEARS.map((y) => (
-              <option key={y}>{y}</option>
-            ))}
-          </select>
-          <span className="muted">–</span>
-          <select className="chip-select" value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
-            {YEARS.map((y) => (
-              <option key={y}>{y}</option>
-            ))}
-          </select>
-        </div>
-        <div className="tb-end">
-          {loading && <span className="spinner" aria-label="계산 중" />}
-          {data?.is_mock && (
-            <span className="demo-flag" title="실제 관측값이 아닌 예시 데이터">
-              예시 데이터
-            </span>
-          )}
-        </div>
-      </div>
+  const st = shown?.stats;
+  const dirWord = st ? ({ increase: "증가", decrease: "감소", flat: "변화 없음" } as const)[st.verdict.direction] : "";
+  const statusWord = st ? ({ significant: "유의함", mixed: "검정 엇갈림", not_significant: "유의하지 않음" } as const)[st.verdict.status] : "";
 
+  return (
+    <main className="page an-page">
       <div className={`with-panel ${panel ? "open" : ""}`}>
-        <section>
+        <div className="an-main">
+          <header className="page-head">
+            <div className="ph-left">
+              <h1>{data?.region.name ?? regions.find((r) => r.id === params.region)?.name ?? "분석 결과"}</h1>
+              <p className="ph-sub">{shown ? `${shown.variable.name} 분석 결과` : "분석 결과"}</p>
+              {/* 조건 줄: 레퍼런스의 검색 줄 자리. 좁으면 가로로 스크롤 */}
+              <div className="filter-line" role="toolbar" aria-label="분석 조건">
+                <Icon name="filter" size={16} />
+                {params.variables.map((id) => (
+                  <span className="chip tag" key={id}>
+                    {variables.find((v) => v.id === id)?.name ?? id}
+                    {params.variables.length > 1 && (
+                      <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
+                        ×
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {params.variables.length < BASKET_LIMIT && (
+                  <select className="chip-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
+                    <option value="">+ 변수</option>
+                    {addable.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <select className="chip-select" value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
+                  {regions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+                <select className="chip-select" value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
+                  {YEARS.map((y) => (
+                    <option key={y}>{y}</option>
+                  ))}
+                </select>
+                <span className="muted">–</span>
+                <select className="chip-select" value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
+                  {YEARS.map((y) => (
+                    <option key={y}>{y}</option>
+                  ))}
+                </select>
+                {loading && <span className="spinner" aria-label="계산 중" />}
+              </div>
+            </div>
+
+            {shown && st && (
+              <dl className="kpi-cluster">
+                <div>
+                  <dt>10년당 변화</dt>
+                  <dd>
+                    <b className="num">
+                      {signed(st.slope_per_decade)}
+                      <small>{shown.variable.unit}</small>
+                    </b>
+                    <span className="pill">
+                      95% {signed(st.ci_per_decade[0])}~{signed(st.ci_per_decade[1])}
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>추세 판정</dt>
+                  <dd>
+                    <b>{dirWord}</b>
+                    <span className={`pill ${st.verdict.status === "significant" ? "solid" : st.verdict.status === "mixed" ? "dashed" : ""}`}>{statusWord}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Mann-Kendall</dt>
+                  <dd>
+                    <b className="num">{pText(st.mk.p).replace("p ", "")}</b>
+                    <span className="pill">t-검정 {pText(st.ols.p).replace("p ", "")}</span>
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </header>
+
           {error && <div className="error-box block-gap">{error}</div>}
           {notice && <div className="flag block-gap">{notice}</div>}
           {!data && !error && (
@@ -187,25 +219,51 @@ export default function Analysis() {
 
           {data && shown && (
             <div className="results" aria-busy={loading} {...(loading ? { "data-stale": "" } : {})}>
-              {data.results.length > 1 && (
-                <div className="seg var-tabs" role="group" aria-label="볼 변수">
-                  {data.results.map((r) => (
-                    <button key={r.variable.id} aria-pressed={r.variable.id === shown.variable.id} onClick={() => setActive(r.variable.id)}>
-                      {r.variable.name}
-                    </button>
-                  ))}
+              {(data.results.length > 1 || data.is_mock) && (
+                <div className="an-subbar">
+                  {data.results.length > 1 && (
+                    <div className="seg var-tabs" role="group" aria-label="볼 변수">
+                      {data.results.map((r) => (
+                        <button key={r.variable.id} aria-pressed={r.variable.id === shown.variable.id} onClick={() => setActive(r.variable.id)}>
+                          {r.variable.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {data.is_mock && (
+                    <span className="demo-flag" title="실제 관측값이 아닌 예시 데이터">
+                      예시 데이터
+                    </span>
+                  )}
                 </div>
               )}
 
-              <ResultFrame key={shown.variable.id} r={shown} region={data.region} regions={regions} onRegion={(id) => update({ region: id })} />
+              <div className="dash">
+                <RegionTrendCard r={shown} region={data.region} onRegion={(id) => update({ region: id })} />
+                <section className="card dash-card">
+                  <CardHead title="산지 지도">
+                    <PeriodPill start={shown.start} end={shown.end} />
+                  </CardHead>
+                  <div className="map-frame">
+                    <RegionMap
+                      regions={regions}
+                      selected={data.region.id}
+                      onSelect={(id) => update({ region: id })}
+                      comparison={shown.regions}
+                      unit={shown.variable.unit}
+                      higherIs={shown.variable.higher_is}
+                    />
+                  </div>
+                </section>
+                <FlowCard r={shown} />
+                <TrendCard r={shown} region={data.region} />
+              </div>
 
               <div className="detail-grid">
                 <VerdictCard r={shown} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
 
-                <div className="card upload-card">
-                  <h3 className="sec-title">
-                    내 기록 겹치기 <span className="muted small">(선택)</span>
-                  </h3>
+                <section className="card upload-card">
+                  <CardHead title="내 기록 겹치기" />
                   <p className="muted small">연도,값 형식 CSV (예: 수확량, 서리 피해율). 그래프 오른쪽 축에 표시. 상관관계는 인과관계가 아님.</p>
                   <label className="field-inline">
                     <span className="muted small">이름</span>
@@ -251,14 +309,14 @@ export default function Analysis() {
                       겹치기 끄기 ({userSeries.length}개 연도)
                     </button>
                   )}
-                  <p className="sources">
+                  <p className="card-note sources">
                     {data.region.blurb} {data.resolution_note}
                   </p>
-                </div>
+                </section>
               </div>
             </div>
           )}
-        </section>
+        </div>
 
         {/* 닫아도 대화가 남도록 숨기기만. display: contents 라 열려 있을 때는 aside 가 그대로 그리드 칸이 됨 */}
         {query && data && (
@@ -279,7 +337,7 @@ export default function Analysis() {
       </div>
       {!panel && (
         <button ref={openBtn} className="glass panel-toggle" onClick={() => setPanel(true)}>
-          <span aria-hidden>✦</span> 인사이트 AI
+          <Icon name="sparkle" size={16} /> 인사이트 AI
         </button>
       )}
     </main>

@@ -1,45 +1,44 @@
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { TONE_COLOR, TONE_LABEL, trendTone } from "../lib/format";
-import type { Region, RegionComparison } from "../lib/types";
+import type { Region, RegionComparison, Variable } from "../lib/types";
 import { useTheme } from "../theme";
+import { TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
+import Icon from "./Icon";
 
 interface Props {
   regions: Region[];
   selected: string | null;
   onSelect?: (id: string) => void;
-  comparison?: RegionComparison[]; // 있으면 추세 방향 색으로 칠함
+  comparison?: RegionComparison[]; // 있으면 산지별 추세를 열 지도 색으로
   unit?: string;
-  padRight?: number; // 오른쪽을 덮는 패널 폭: 선택 산지를 보이는 영역 가운데로
+  higherIs?: Variable["higher_is"];
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-// 로고의 궤도 모양 마커: 가운데 점(데이터 색) + 기울어진 궤도, 선택된 산지에만 위성 점.
-function orbitIcon(color: string, sel: boolean, name: string, sub: string | null) {
+// 산지 하나 = 번진 열 자국(데이터 색) + 가운데 점. 선택된 산지에는 어두운 말풍선 카드.
+function heatIcon(tone: Tone | null, sel: boolean, name: string, value: string | null, sub: string) {
+  const color = tone ? TONE_VAR[tone] : sel ? "var(--fg)" : "var(--none)";
   return L.divIcon({
-    className: "mk-icon",
+    className: "heat-icon",
     html:
-      `<div class="mk"${sel ? " data-sel" : ""} style="--tone:${color}">` +
-      `<svg class="mk-orbit" viewBox="0 0 44 28" aria-hidden="true"><ellipse cx="22" cy="14" rx="19" ry="7" transform="rotate(-18 22 14)"/></svg>` +
-      `<span class="mk-core"></span>${sel ? '<span class="mk-sat"></span>' : ""}` +
-      `<span class="mk-label">${esc(name)}${sub ? `<small>${esc(sub)}</small>` : ""}</span></div>`,
-    iconSize: [44, 28],
-    iconAnchor: [22, 14],
+      `<div class="heat"${sel ? " data-sel" : ""}${tone ? "" : " data-plain"} style="--tone:${color}">` +
+      `<span class="heat-glow"></span><span class="heat-core"></span>` +
+      `<span class="heat-tip"><b>${esc(name)}</b>${value ? `<em>${esc(value)}</em>` : ""}<small>${esc(sub)}</small></span></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
 }
 
-function FlyTo({ region, padRight }: { region?: Region; padRight: number }) {
+function FlyTo({ region }: { region?: Region }) {
   const map = useMap();
   useEffect(() => {
     if (!region) return;
     const z = Math.max(map.getZoom(), 4);
-    const center = map.unproject(map.project([region.lat, region.lon], z).add([padRight / 2, 0]), z);
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) map.setView(center, z, { animate: false });
-    else map.flyTo(center, z, { duration: 0.8 });
-  }, [region, map, padRight]);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) map.setView([region.lat, region.lon], z, { animate: false });
+    else map.flyTo([region.lat, region.lon], z, { duration: 0.8 });
+  }, [region, map]);
   return null;
 }
 
@@ -52,27 +51,52 @@ function WheelOnClick() {
   return null;
 }
 
-export default function RegionMap({ regions, selected, onSelect, comparison, unit, padRight = 0 }: Props) {
+// 왼쪽 동그란 확대·축소·전체 보기 버튼 (Leaflet 기본 컨트롤 대신)
+function MapTools({ regions }: { regions: Region[] }) {
+  const map = useMap();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      L.DomEvent.disableClickPropagation(ref.current);
+      L.DomEvent.disableScrollPropagation(ref.current);
+    }
+  }, []);
+  const fit = () => map.flyToBounds(L.latLngBounds(regions.map((r) => [r.lat, r.lon] as [number, number])).pad(0.3), { duration: 0.6 });
+  return (
+    <div className="map-tools" ref={ref}>
+      <button className="icon-btn" onClick={() => map.zoomIn()} aria-label="확대">
+        <Icon name="plus" />
+      </button>
+      <button className="icon-btn" onClick={() => map.zoomOut()} aria-label="축소">
+        <Icon name="minus" />
+      </button>
+      <button className="icon-btn" onClick={fit} aria-label="산지 전체 보기">
+        <Icon name="expand" />
+      </button>
+    </div>
+  );
+}
+
+export default function RegionMap({ regions, selected, onSelect, comparison, unit, higherIs = "worse" }: Props) {
   const sel = regions.find((r) => r.id === selected);
   const theme = useTheme();
-  // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼워 위성 등장 효과가 반복되므로 고정
+  // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼우므로 고정
   const icons = useMemo(
     () =>
       Object.fromEntries(
         regions.map((r) => {
           const c = comparison?.find((x) => x.region_id === r.id);
-          const isSel = r.id === selected;
-          const color = c ? TONE_COLOR[trendTone(c.status, c.direction)] : isSel ? "var(--fg)" : "rgb(var(--fg-rgb) / .45)";
-          const sub = c ? `${c.label}, 10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : r.country;
-          return [r.id, orbitIcon(color, isSel, r.name, sub)];
+          const tone = c ? toneOf(c.status, c.direction, higherIs) : null;
+          const value = c ? `10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : null;
+          return [r.id, heatIcon(tone, r.id === selected, r.name, value, c ? c.label : r.country)];
         }),
       ),
-    [regions, selected, comparison, unit],
+    [regions, selected, comparison, unit, higherIs],
   );
 
   return (
     <>
-      <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false}>
+      <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false} zoomControl={false}>
         <TileLayer
           // CARTO 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 그레이 베이스맵 (테마에 맞춰 다크/라이트)
           key={theme}
@@ -80,8 +104,9 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
-        <FlyTo region={sel} padRight={padRight} />
+        <FlyTo region={sel} />
         <WheelOnClick />
+        <MapTools regions={regions} />
         {regions.map((r) => (
           <Marker
             key={r.id}
@@ -95,14 +120,14 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
         ))}
       </MapContainer>
       {comparison && (
-        <div className="map-legend glass">
-          {(["up", "down", "mixed", "none"] as const).map((t) => (
-            <span key={t}>
-              <i style={{ background: TONE_COLOR[t] }} />
-              {TONE_LABEL[t]}
-            </span>
+        <ul className="map-legend" aria-label="지도 색">
+          {(["bad", "mid", "good", "none"] as const).map((t) => (
+            <li key={t}>
+              <i style={{ background: TONE_VAR[t] }} />
+              {TONE_TEXT[t]}
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </>
   );

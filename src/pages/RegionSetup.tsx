@@ -59,11 +59,10 @@ export default function RegionSetup() {
             <div className="region-list">
               {filtered.map((r) => (
                 <button key={r.id} className={`region-item ${r.id === sel.region ? "sel" : ""}`} aria-pressed={r.id === sel.region} onClick={() => set({ region: r.id })}>
+                  <span className="dot" aria-hidden />
                   <b>{r.name}</b>
+                  <span className="leader" aria-hidden />
                   <span className="ctry">{r.country}</span>
-                  <span className="check" aria-hidden>
-                    ✓
-                  </span>
                 </button>
               ))}
               {filtered.length === 0 && <span className="muted small">검색 결과 없음</span>}

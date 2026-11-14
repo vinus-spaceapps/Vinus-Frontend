@@ -1,6 +1,8 @@
-import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, type DotProps, type TooltipProps } from "recharts";
+import { useId } from "react";
+import { CartesianGrid, ComposedChart, Customized, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, type DotProps, type TooltipProps } from "recharts";
 import type { VariableResult } from "../lib/types";
 import { useTokens } from "../theme";
+import { scaleColor } from "../tone";
 
 interface Row {
   year: number;
@@ -10,35 +12,70 @@ interface Row {
   user?: number;
 }
 
-interface Props {
-  r: VariableResult;
-}
+const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1));
 
-const fmt = (v: number) => v.toFixed(2).replace(/\.?0+$/, "");
-
-function Tip({ active, payload, label }: TooltipProps<number, string>) {
+// 어두운 말풍선: 값 + 추세선 대비 차이 + 연도
+function Tip({ active, payload, label, unit }: TooltipProps<number, string> & { unit: string }) {
   if (!active || !payload?.length) return null;
+  const row = payload[0].payload as Row;
+  if (row.value === undefined) return null;
+  const diff = row.sen !== undefined ? row.value - row.sen : null;
   return (
     <div className="chart-tip">
-      <b>{label}년</b>
-      {payload
-        .filter((p) => typeof p.value === "number")
-        .map((p) => (
-          <span key={String(p.dataKey)}>
-            {p.name} <b className="num">{fmt(p.value as number)}</b>
-          </span>
-        ))}
+      <b className="num">
+        {fmt(row.value)}
+        {unit}
+      </b>
+      {diff !== null && <em className="num">{`${diff >= 0 ? "+" : ""}${fmt(diff)}`}</em>}
+      <small>{label}년, 추세선 대비</small>
+      {row.user !== undefined && <small>내 기록 {fmt(row.user)}</small>}
     </div>
   );
 }
 
-// 연도별 점 + 추세선. 데이터는 전경색(다크=흰), Sen 은 실선, OLS 는 옅은 점선. 헤드라인 방법이 더 굵음.
-// 색이 들어가는 건 사용자가 겹친 자기 기록(데이터)뿐.
-export default function TrendChart({ r }: Props) {
+interface PillItem {
+  value: number;
+  label: string;
+  fill: string;
+  text: string;
+}
+
+// 선 끝에 이름표. 서로 겹치지 않게 세로로 밀어냄
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function EndPills(props: any & { items: PillItem[] }) {
+  const y = props.yAxisMap?.l?.scale;
+  const off = props.offset;
+  if (!y || !off) return null;
+  const placed = (props.items as PillItem[])
+    .map((it) => ({ ...it, y: y(it.value) as number }))
+    .sort((a, b) => a.y - b.y);
+  for (let i = 1; i < placed.length; i++) placed[i].y = Math.max(placed[i].y, placed[i - 1].y + 26);
+  const x = off.left + off.width + 10;
+  return (
+    <g>
+      {placed.map((p) => {
+        const w = p.label.length * 11 + 20;
+        return (
+          <g key={p.label} transform={`translate(${x}, ${p.y - 11})`}>
+            <rect width={w} height={22} rx={11} fill={p.fill} />
+            <text x={w / 2} y={15} textAnchor="middle" fontSize={11} fontWeight={600} fill={p.text}>
+              {p.label}
+            </text>
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+// 연도별 값은 값 크기에 따라 초록→주황→빨강 그라데이션 선, Sen 은 회색 실선, OLS 는 회색 점선. 가장 튄 해만 링.
+export default function TrendChart({ r }: { r: VariableResult }) {
   const t = useTokens();
+  const gid = useId().replace(/:/g, "");
   const robust = r.stats.method === "sen";
   const lo = r.stats.leave_out.year;
   const unit = r.variable.unit;
+  const hi = r.variable.higher_is;
 
   const rows = new Map<number, Row>();
   const row = (y: number) => rows.get(y) ?? rows.set(y, { year: y }).get(y)!;
@@ -50,67 +87,64 @@ export default function TrendChart({ r }: Props) {
   });
   const data = [...rows.values()].sort((a, b) => a.year - b.year);
 
-  // 가장 튄 해만 링, 나머지는 작은 채운 점
+  const vs = r.series.map((p) => p.value);
+  const vmin = Math.min(...vs), vspan = Math.max(...vs) - vmin || 1;
+  const first = r.series[0]?.year ?? r.start, last = r.series[r.series.length - 1]?.year ?? r.end;
+  const lastVal = r.series[r.series.length - 1]?.value ?? 0;
+  const lastColor = scaleColor((lastVal - vmin) / vspan, hi);
+  const endOf = (pts: { year: number; value: number }[]) => pts[pts.length - 1]?.value;
+
   const Dot = (props: DotProps & { payload?: Row }) => {
     const { cx, cy, payload } = props;
-    if (cx == null || cy == null || payload?.value == null) return null;
-    return payload.year === lo ? (
-      <circle cx={cx} cy={cy} r={5.5} fill={t.bg} stroke={t.fg} strokeWidth={2} />
-    ) : (
-      <circle cx={cx} cy={cy} r={3} fill={t.fg} />
-    );
+    if (cx == null || cy == null || payload?.year !== lo) return null;
+    return <circle cx={cx} cy={cy} r={5} fill={t.card} stroke={t.fg} strokeWidth={2} />;
   };
+
+  const pills: PillItem[] = [
+    { value: lastVal, label: "연도별 값", fill: lastColor, text: "#fff" },
+    ...(endOf(r.trend.sen) !== undefined ? [{ value: endOf(r.trend.sen)!, label: robust ? "Sen 추세" : "Sen", fill: t.chip, text: t.muted }] : []),
+    ...(endOf(r.trend.ols) !== undefined ? [{ value: endOf(r.trend.ols)!, label: robust ? "OLS" : "OLS 추세", fill: t.chip, text: t.muted }] : []),
+  ];
 
   const tick = { fontSize: 11, fill: t.muted };
 
   return (
-    <div>
-      <ResponsiveContainer width="100%" height={260}>
-        <ComposedChart data={data} margin={{ top: 10, right: r.overlay ? 4 : 12, bottom: 0, left: -12 }}>
+    <div className="trend">
+      <ResponsiveContainer width="100%" height={250}>
+        <ComposedChart data={data} margin={{ top: 12, right: 96, bottom: 0, left: -16 }}>
+          <defs>
+            <linearGradient id={gid} x1="0" x2="1" y1="0" y2="0">
+              {r.series.map((p) => (
+                <stop key={p.year} offset={last === first ? 0 : (p.year - first) / (last - first)} stopColor={scaleColor((p.value - vmin) / vspan, hi)} />
+              ))}
+            </linearGradient>
+          </defs>
           <CartesianGrid stroke={t.line} vertical={false} />
-          <XAxis dataKey="year" type="number" domain={[r.start, r.end]} tickCount={6} allowDecimals={false} tick={tick} stroke={t.line} tickLine={false} />
-          <YAxis
+          <XAxis dataKey="year" type="number" domain={[r.start, r.end]} tickCount={6} allowDecimals={false} tick={tick} axisLine={false} tickLine={false} />
+          <YAxis yAxisId="l" tick={tick} width={52} axisLine={false} tickLine={false} />
+          {r.overlay && <YAxis yAxisId="r" orientation="right" tick={{ ...tick, fill: t.cool }} width={40} axisLine={false} tickLine={false} />}
+          <Tooltip content={<Tip unit={unit} />} cursor={{ stroke: t.fg, strokeDasharray: "2 4", strokeWidth: 1 }} isAnimationActive={false} />
+          <Line yAxisId="l" dataKey="ols" name="OLS 추세" type="linear" stroke={t.none} strokeDasharray="4 4" strokeWidth={robust ? 1.5 : 2.5} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+          <Line yAxisId="l" dataKey="sen" name="Sen 추세" type="linear" stroke={t.none} strokeWidth={robust ? 2.5 : 1.5} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+          <Line
             yAxisId="l"
-            tick={tick}
-            width={56}
-            axisLine={false}
-            tickLine={false}
-            label={unit ? { value: unit, angle: -90, position: "insideLeft", offset: 22, fontSize: 11, fill: t.muted } : undefined}
+            dataKey="value"
+            name={r.variable.name}
+            type="monotone"
+            stroke={`url(#${gid})`}
+            strokeWidth={2.5}
+            dot={<Dot />}
+            activeDot={{ r: 6, fill: t.card, stroke: t.fg, strokeWidth: 2 }}
+            isAnimationActive={false}
           />
-          {r.overlay && <YAxis yAxisId="r" orientation="right" tick={{ ...tick, fill: t.overlay }} width={44} axisLine={false} tickLine={false} />}
-          <Tooltip content={<Tip />} cursor={{ stroke: t.line }} isAnimationActive={false} />
-          <Line yAxisId="l" dataKey="value" name={r.variable.name} stroke={t.fg} strokeOpacity={0.3} strokeWidth={1} dot={<Dot />} activeDot={{ r: 5, fill: t.fg, stroke: t.bg, strokeWidth: 2 }} isAnimationActive={false} />
-          <Line yAxisId="l" dataKey="ols" name="OLS 추세" stroke={t.faint} strokeDasharray="4 4" strokeWidth={robust ? 1.5 : 2.5} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
-          <Line yAxisId="l" dataKey="sen" name="Sen 추세" stroke={t.fg} strokeWidth={robust ? 2.5 : 1.5} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
-          {r.overlay && (
-            <Line yAxisId="r" dataKey="user" name={r.overlay.label} stroke={t.overlay} strokeWidth={2} dot={{ r: 2.5, fill: t.overlay, stroke: "none" }} connectNulls isAnimationActive={false} />
-          )}
+          {r.overlay && <Line yAxisId="r" dataKey="user" name={r.overlay.label} type="monotone" stroke={t.cool} strokeWidth={2} dot={{ r: 2.5, fill: t.cool, stroke: "none" }} connectNulls isAnimationActive={false} />}
+          <Customized component={(p: object) => <EndPills {...p} items={pills} />} />
         </ComposedChart>
       </ResponsiveContainer>
-      <div className="chart-legend">
-        <span>
-          <i className="lg-dot" />
-          연도별 값
-        </span>
-        <span>
-          <i className="lg-line" />
-          Sen 추세{robust ? " (헤드라인)" : ""}
-        </span>
-        <span>
-          <i className="lg-dash" />
-          OLS 추세{robust ? "" : " (헤드라인)"}
-        </span>
-        <span>
-          <i className="lg-ring" />
-          최대 이상치 ({lo})
-        </span>
-        {r.overlay && (
-          <span>
-            <i className="lg-line" style={{ background: t.overlay }} />
-            {r.overlay.label} (오른쪽 축)
-          </span>
-        )}
-      </div>
+      <p className="card-note">
+        링: 가장 튄 해 ({lo}). {robust ? "Sen 추세가 헤드라인" : "OLS 추세가 헤드라인"}
+        {r.overlay ? `. 파란 선: ${r.overlay.label} (오른쪽 축)` : ""}
+      </p>
     </div>
   );
 }
