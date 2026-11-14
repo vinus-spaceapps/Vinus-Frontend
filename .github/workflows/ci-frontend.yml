@@ -1,0 +1,46 @@
+name: CI Frontend
+
+# ⚠️ paths 필터를 걸지 마세요.
+# 이 job 은 룰셋 필수 체크입니다. 실행이 안 되면 "필수 체크 대기 중" 으로 남아 머지가 막힙니다.
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+# 같은 PR 에 커밋을 연달아 푸시하면 이전 실행을 취소합니다.
+concurrency:
+  group: ci-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # job id 가 곧 룰셋 필수 체크 이름입니다. 바꾸면 룰셋도 같이 바꿔야 합니다.
+  ci-frontend:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 프로젝트를 만들기 전(package.json 없음)에도 CI 가 통과하도록 확인합니다.
+      - name: Check project
+        id: check
+        run: |
+          if [ -f package.json ]; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "package.json 없음, 건너뜀"; fi
+
+      - name: Set up Node.js
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # package-lock.json 그대로 설치합니다. lock 파일과 package.json 이 어긋나면 실패합니다.
+      - name: Install
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+
+      - name: Lint
+        if: steps.check.outputs.exists == 'true'
+        run: npm run lint --if-present
+
+      - name: Build
+        if: steps.check.outputs.exists == 'true'
+        run: npm run build

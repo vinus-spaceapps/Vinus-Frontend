@@ -1,0 +1,25 @@
+# 에디터마다 들여쓰기·줄바꿈이 달라서 생기는 diff 노이즈를 막습니다.
+# VS Code, IntelliJ/PyCharm 이 자동으로 읽습니다. 팀원이 따로 설정할 것 없습니다.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# 파이썬은 PEP 8 기준 4칸입니다.
+[*.py]
+indent_size = 4
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.md]
+# 마크다운은 줄 끝 공백 두 개가 줄바꿈 의미라 지우면 안 됩니다.
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
