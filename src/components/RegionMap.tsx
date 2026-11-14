@@ -1,6 +1,6 @@
 import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Rectangle, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Region, RegionComparison, Variable } from "../lib/types";
 import { TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
 import Icon from "./Icon";
@@ -12,13 +12,14 @@ interface Props {
   comparison?: RegionComparison[]; // 있으면 산지별 추세를 열 지도 색으로
   unit?: string;
   higherIs?: Variable["higher_is"];
+  zoom?: number; // 산지를 고르면 이 배율까지 다가감 (산지 화면은 분석 범위 네모가 보이게 더 가까이)
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-// 산지 하나 = 번진 열 자국(데이터 색) + 가운데 점. 선택된 산지에는 어두운 말풍선 카드.
+// 산지 하나 = 번진 열 자국(데이터 색) + 가운데 점. 선택된 산지에는 말풍선 카드.
 function heatIcon(tone: Tone | null, sel: boolean, name: string, value: string | null, sub: string) {
-  const color = tone ? TONE_VAR[tone] : sel ? "var(--wine)" : "var(--none)";
+  const color = tone ? TONE_VAR[tone] : sel ? "var(--w3)" : "var(--none)";
   return L.divIcon({
     className: "heat-icon",
     html:
@@ -30,14 +31,14 @@ function heatIcon(tone: Tone | null, sel: boolean, name: string, value: string |
   });
 }
 
-function FlyTo({ region }: { region?: Region }) {
+function FlyTo({ region, zoom }: { region?: Region; zoom: number }) {
   const map = useMap();
   useEffect(() => {
     if (!region) return;
-    const z = Math.max(map.getZoom(), 4);
+    const z = Math.max(map.getZoom(), zoom);
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) map.setView([region.lat, region.lon], z, { animate: false });
     else map.flyTo([region.lat, region.lon], z, { duration: 0.8 });
-  }, [region, map]);
+  }, [region, map, zoom]);
   return null;
 }
 
@@ -63,20 +64,20 @@ function MapTools({ regions }: { regions: Region[] }) {
   const fit = () => map.flyToBounds(L.latLngBounds(regions.map((r) => [r.lat, r.lon] as [number, number])).pad(0.3), { duration: 0.6 });
   return (
     <div className="map-tools" ref={ref}>
-      <button className="icon-btn" onClick={() => map.zoomIn()} aria-label="확대">
+      <button className="ic" onClick={() => map.zoomIn()} aria-label="확대">
         <Icon name="plus" />
       </button>
-      <button className="icon-btn" onClick={() => map.zoomOut()} aria-label="축소">
+      <button className="ic" onClick={() => map.zoomOut()} aria-label="축소">
         <Icon name="minus" />
       </button>
-      <button className="icon-btn" onClick={fit} aria-label="산지 전체 보기">
+      <button className="ic" onClick={fit} aria-label="산지 전체 보기">
         <Icon name="expand" />
       </button>
     </div>
   );
 }
 
-export default function RegionMap({ regions, selected, onSelect, comparison, unit, higherIs = "worse" }: Props) {
+export default function RegionMap({ regions, selected, onSelect, comparison, unit, higherIs = "worse", zoom = 4 }: Props) {
   const sel = regions.find((r) => r.id === selected);
   // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼우므로 고정
   const icons = useMemo(
@@ -101,9 +102,20 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
-        <FlyTo region={sel} />
+        <FlyTo region={sel} zoom={zoom} />
         <WheelOnClick />
         <MapTools regions={regions} />
+        {/* 고른 산지의 분석 범위 (백엔드 regions.json bbox: 남·북 위도, 서·동 경도) */}
+        {sel?.bbox && (
+          <Rectangle
+            bounds={[
+              [sel.bbox[0], sel.bbox[2]],
+              [sel.bbox[1], sel.bbox[3]],
+            ]}
+            pathOptions={{ color: "#8c3b55", weight: 2, dashArray: "6 5", fillColor: "#8c3b55", fillOpacity: 0.06 }}
+            interactive={false}
+          />
+        )}
         {regions.map((r) => (
           <Marker
             key={r.id}

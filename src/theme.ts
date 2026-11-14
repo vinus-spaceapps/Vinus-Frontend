@@ -1,20 +1,19 @@
 import { useMemo } from "react";
 
-// 라이트 테마 하나뿐. Recharts 처럼 색을 문자열로 받는 곳에 styles.css 토큰의 실제 값을 넘김.
+// Recharts 처럼 색을 문자열로 받는 곳에 styles.css 토큰의 실제 값을 넘김 (라이트 테마 하나).
 export function useTokens() {
   return useMemo(() => {
     const s = getComputedStyle(document.documentElement);
     const g = (n: string) => s.getPropertyValue(n).trim();
     return {
-      text: g("--fg"),
-      ink: g("--ink"),
-      card: g("--card-solid"),
+      ink: g("--dark"),
+      axis: g("--axis"),
       muted: g("--muted"),
-      line2: g("--line-2"),
-      none: g("--none"),
-      purple: g("--purple"),
-      blue: g("--blue"),
-      orange: g("--orange"),
+      barOff: g("--bar-off"),
+      w1: g("--w1"),
+      w3: g("--w3"),
+      w4: g("--w4"),
+      blue: g("--good"),
     };
   }, []);
 }

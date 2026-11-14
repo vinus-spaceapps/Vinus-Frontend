@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api";
-import type { Category, Health, Region, Variable } from "./types";
+import type { Category, Family, Health, Region, Variable } from "./types";
 
 interface CatalogState {
   categories: Category[];
+  families: Family[];
   variables: Variable[];
   regions: Region[];
   health: Health | null;
@@ -18,6 +19,7 @@ const CatalogContext = createContext<CatalogState | null>(null);
 // 변수 목록·산지 목록·AI 상태를 앱 시작 때 한 번 불러옵니다.
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [families, setFamilies] = useState<Family[]>([]);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
@@ -30,6 +32,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       .then(([v, r, h]) => {
         if (!alive) return;
         setCategories(v.categories);
+        setFamilies(v.families ?? []);
         setVariables(v.variables);
         setRegions(r);
         setHealth(h);
@@ -43,6 +46,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
   const value: CatalogState = {
     categories,
+    families,
     variables,
     regions,
     health,

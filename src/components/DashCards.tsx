@@ -1,92 +1,80 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
-import { pText, signed } from "../lib/format";
-import type { Region, VariableResult, YearValue, Variable } from "../lib/types";
-import { heatGradient, scaleColor, TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
+import { useState, type ReactNode } from "react";
+import { fmtNum, lineAt, pText, signed } from "../lib/format";
+import type { Region, Validation, Variable, VariableResult, YearValue } from "../lib/types";
+import { HEAT_LEVELS, TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
 import Icon, { type IconName } from "./Icon";
-import TrendChart from "./TrendChart";
-
-const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1));
+import TrendChart, { asBars } from "./TrendChart";
 
 /* ======================================================================
-   Figma Components 의 차트 카드 뼈대 (Header 6:10412 · Tabs 13:33585 · Body 6:10413)
-   - Header: Meta Info 14 / 제목 22 Bold / 값 26 Bold / 부제 16 회색, 오른쪽 위 32px 아이콘 버튼
-   - Tabs: 같은 너비 회색 탭 줄 (선택 = 와인)
-   - Data: 범례(Key Item) + 차트
-   - Body: Meta Info 14 / 제목 24 Bold / 부제 16
+   Figma "Full charts components" 의 card 뼈대:
+   card(흰 바탕, 라운드 20) = card-header(패딩 25, 제목 + 오른쪽 둥근 아이콘 40) + card-body + card-footer
    ====================================================================== */
-export interface CardTab {
-  id: string;
-  label: string;
-}
-export function ChartCard({
-  meta,
+export function Card({
   title,
-  value,
-  sub,
+  desc,
+  icon,
+  tint,
   action,
-  tabs,
-  tab,
-  onTab,
-  body,
+  footer,
   children,
   className = "",
 }: {
-  meta?: string;
-  title: string;
-  value?: ReactNode;
-  sub?: string;
-  action?: { icon: IconName; label: string; onClick: () => void };
-  tabs?: CardTab[];
-  tab?: string;
-  onTab?: (id: string) => void;
-  body?: { meta?: string; title: string; sub?: string };
+  title: ReactNode;
+  desc?: ReactNode;
+  icon?: IconName; // 제목 앞 아이콘 (Doughnut 카드처럼)
+  tint?: boolean; // 머리 칸 옅은 바탕 (#FCFCFC)
+  action?: ReactNode;
+  footer?: ReactNode;
   children?: ReactNode;
   className?: string;
 }) {
   return (
-    <section className={`fcard ${className}`}>
-      <header className="fc-head">
-        <div className="fc-text">
-          {meta && <p className="fc-meta">{meta}</p>}
-          <h2 className="fc-title">{title}</h2>
-          {value !== undefined && <p className="fc-value num">{value}</p>}
-          {sub && <p className="fc-sub">{sub}</p>}
+    <section className={`card ${className}`}>
+      <header className={`card-head ${tint ? "tint" : ""}`}>
+        <div className="card-titles">
+          <h2 className="card-title">
+            {icon && <Icon name={icon} size={24} />}
+            {title}
+          </h2>
+          {desc && <p className="card-desc">{desc}</p>}
         </div>
-        {action && (
-          <button className="fc-icon" onClick={action.onClick} aria-label={action.label} title={action.label}>
-            <Icon name={action.icon} />
-          </button>
-        )}
-        {tabs && (
-          <div className="fc-tabs" role="group" aria-label={`${title} 보기`}>
-            {tabs.map((t) => (
-              <button key={t.id} className="fc-tab" aria-pressed={tab === t.id} onClick={() => onTab?.(t.id)}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {action}
       </header>
-      {children && <div className="fc-data">{children}</div>}
-      {body && (
-        <footer className="fc-body">
-          {body.meta && <p className="fc-meta">{body.meta}</p>}
-          <p className="fc-body-title">{body.title}</p>
-          {body.sub && <p className="fc-sub">{body.sub}</p>}
-        </footer>
-      )}
+      {children && <div className="card-body">{children}</div>}
+      {footer && <footer className="card-foot">{footer}</footer>}
     </section>
   );
 }
 
-/* Figma Key Item: 10px 점 + 12px 이름 */
-export function Key({ items }: { items: { label: string; color?: string; kind?: "dot" | "dash" | "ring" }[] }) {
+// 둥근 아이콘 버튼 (Icons contained=true: 40, #F2F2F2)
+export function IconBtn({ icon, label, onClick, pressed }: { icon: IconName; label: string; onClick?: () => void; pressed?: boolean }) {
   return (
-    <ul className="key">
-      {items.map((it) => (
-        <li key={it.label}>
-          <i className={it.kind ?? "dot"} style={it.kind === "dash" || it.kind === "ring" ? { borderColor: it.color } : { background: it.color }} />
+    <button className="ic" onClick={onClick} aria-label={label} title={label} {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}>
+      <Icon name={icon} size={24} />
+    </button>
+  );
+}
+
+// 알약 칩 줄 (Statistic 카드의 24h·1d·3d…): 고른 것만 진한 바탕
+export function Seg<T extends string>({ options, value, onChange, label }: { options: { id: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; label: string }) {
+  return (
+    <div className="seg" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} aria-pressed={o.id === value} onClick={() => onChange(o.id)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// 범례: Doughnut 카드의 알약 견본(27×13) + 이름
+export function Legend({ items }: { items: { label: ReactNode; color: string; kind?: "line" | "dash" }[] }) {
+  return (
+    <ul className="legend">
+      {items.map((it, i) => (
+        <li key={i}>
+          <i className={it.kind ?? ""} style={{ background: it.kind ? undefined : it.color, borderColor: it.color }} />
           {it.label}
         </li>
       ))}
@@ -94,46 +82,50 @@ export function Key({ items }: { items: { label: string; color?: string; kind?: 
   );
 }
 
-/* ======================================================================
-   KPI: Figma Cards (Type=Detailed 35:10260)
-   Meta 12 회색 / 값 26 ExtraBold + 변화 배지 / 보조 16 회색 / 진행 막대(양 끝 숫자 12, 4px 막대)
-   ====================================================================== */
-interface Bar {
-  left: string;
-  right: string;
-  from: number;
-  to: number;
-  mark?: number;
-  tick?: number;
-}
-function KpiCard({ meta, value, badge, text, icon, color, bar }: { meta: string; value: ReactNode; badge?: { text: string; tone: Tone }; text: string; icon: IconName; color: string; bar: Bar }) {
-  const c = (x: number) => `${Math.min(100, Math.max(0, x * 100))}%`;
+// Avatars: 사진 대신 산지 이름 첫 글자. ring = Outline=true
+export function Avatar({ name, size = 60, ring }: { name: string; size?: number; ring?: boolean }) {
   return (
-    <section className="kpi-card" style={{ ["--kpi-c" as string]: color }}>
-      <div className="kpi-top">
-        <div className="kpi-text">
-          <p className="kpi-meta">{meta}</p>
-          <div className="kpi-value">
-            <b className="num">{value}</b>
-            {badge && <span className={`kbadge ${badge.tone}`}>{badge.text}</span>}
-          </div>
-        </div>
-        <span className="kpi-ic" aria-hidden>
-          <Icon name={icon} />
+    <span className={`avatar ${ring ? "ring" : ""}`} style={{ width: size, height: size, fontSize: size * 0.4 }} aria-hidden>
+      {name.trim().charAt(0)}
+    </span>
+  );
+}
+
+// media: 아바타 + 이름(20) + 보조(13 회색) + 오른쪽 옵션
+export function Media({ name, sub, option, size = 60 }: { name: string; sub: ReactNode; option?: ReactNode; size?: number }) {
+  return (
+    <div className="media">
+      <Avatar name={name} size={size} />
+      <div className="media-text">
+        <b>{name}</b>
+        <span>{sub}</span>
+      </div>
+      {option}
+    </div>
+  );
+}
+
+const toneOfResult = (r: VariableResult): Tone => toneOf(r.stats.verdict.status, r.stats.verdict.direction, r.variable.higher_is);
+
+/* ======================================================================
+   핵심 숫자 4개 (Collection·$890.93 카드: 제목 + 아이콘 / 큰 숫자 36 / 보조 / 작은 그래픽)
+   ====================================================================== */
+function Kpi({ title, icon, value, unit, badge, sub, children }: { title: string; icon: IconName; value: ReactNode; unit?: string; badge?: ReactNode; sub: ReactNode; children: ReactNode }) {
+  return (
+    <section className="card kpi">
+      <div className="kpi-head">
+        <span className="kpi-title">{title}</span>
+        <span className="ic static" aria-hidden>
+          <Icon name={icon} size={24} />
         </span>
       </div>
-      <p className="kpi-sub">{text}</p>
-      <div className="kpi-bar">
-        <div className="kpi-bar-labels num">
-          <span>{bar.left}</span>
-          <span>{bar.right}</span>
-        </div>
-        <div className="kpi-track">
-          <i style={{ left: c(Math.min(bar.from, bar.to)), width: c(Math.abs(bar.to - bar.from)) }} />
-          {bar.tick !== undefined && <span className="kpi-tick" style={{ left: c(bar.tick) }} />}
-          {bar.mark !== undefined && <em style={{ left: c(bar.mark) }} />}
-        </div>
-      </div>
+      <p className="kpi-value">
+        <b className="num">{value}</b>
+        {unit && <small>{unit}</small>}
+        {badge}
+      </p>
+      <p className="kpi-sub">{sub}</p>
+      <div className="kpi-viz">{children}</div>
     </section>
   );
 }
@@ -141,278 +133,370 @@ function KpiCard({ meta, value, badge, text, icon, color, bar }: { meta: string;
 export function KpiRow({ r }: { r: VariableResult }) {
   const st = r.stats;
   const unit = r.variable.unit;
-  const tone = toneOf(st.verdict.status, st.verdict.direction, r.variable.higher_is);
-  const arrow = st.verdict.direction === "increase" ? "▴" : st.verdict.direction === "decrease" ? "▾" : "–";
-  const dir = { increase: "증가", decrease: "감소", flat: "변화 없음" }[st.verdict.direction];
   const [lo, hi] = st.ci_per_decade;
-  const a = Math.min(lo, 0), b = Math.max(hi, 0), span = b - a || 1;
-  const pos = (v: number) => (v - a) / span;
-  const vs = r.series.map((p) => p.value);
-  const vmin = Math.min(...vs), vmax = Math.max(...vs), vspan = vmax - vmin || 1;
-  const pct = Math.abs(st.early.mean) > 1e-9 ? ((st.late.mean - st.early.mean) / Math.abs(st.early.mean)) * 100 : null;
-  const total = r.end - r.start + 1;
+  const tone = toneOfResult(r);
+  // 신뢰구간 막대: 0 을 꼭 포함하는 범위에서 구간·추정값 위치
+  const dLo = Math.min(lo, 0), dHi = Math.max(hi, 0);
+  const pad = (dHi - dLo) * 0.08 || 1;
+  const pos = (x: number) => `${((x - (dLo - pad)) / (dHi - dLo + 2 * pad)) * 100}%`;
+  const vals = r.series.map((p) => p.value);
+  const sMin = Math.min(...vals), sMax = Math.max(...vals);
+  const rel = (x: number) => `${Math.max(4, ((x - sMin) / (sMax - sMin || 1)) * 100)}%`;
+  const arrow = st.verdict.direction === "increase" ? "▲" : st.verdict.direction === "decrease" ? "▼" : "–";
+  const tests = [
+    { label: "Mann-Kendall", p: st.mk.p },
+    { label: "t-검정", p: st.ols.p },
+    { label: "자기상관 보정", p: st.ols.p_ar1 },
+  ];
+  const have = new Set(r.series.map((p) => p.year));
+  const years = Array.from({ length: r.end - r.start + 1 }, (_, i) => r.start + i);
+
   return (
     <div className="kpi-row">
-      <KpiCard
-        meta="10년당 변화"
-        value={
-          <>
-            {signed(st.slope_per_decade)}
-            <small>{unit}</small>
-          </>
+      <Kpi
+        title="10년당 변화"
+        icon="bars"
+        value={signed(st.slope_per_decade)}
+        unit={unit}
+        badge={
+          <span className={`tag ${tone}`}>
+            {arrow} {TONE_TEXT[tone]}
+          </span>
         }
-        badge={{ text: `${arrow} ${dir}`, tone }}
-        text={`95% 신뢰구간, ${st.method === "sen" ? "Sen" : "OLS"} 기울기`}
-        icon="chart"
-        color="var(--blue)"
-        bar={{ left: signed(lo), right: signed(hi), from: pos(lo), to: pos(hi), mark: pos(st.slope_per_decade), tick: pos(0) }}
-      />
-      <KpiCard
-        meta="추세 판정"
-        value={st.verdict.label}
-        text={`Mann-Kendall ${pText(st.mk.p)}`}
-        icon="check"
-        color="var(--orange)"
-        bar={{ left: "p 0", right: "0.1", from: 0, to: Math.min(st.mk.p, 0.1) / 0.1, mark: Math.min(st.mk.p, 0.1) / 0.1, tick: 0.5 }}
-      />
-      <KpiCard
-        meta="초기 → 최근 평균"
-        value={
-          <>
-            {fmt(st.early.mean)} → {fmt(st.late.mean)}
-            <small>{unit}</small>
-          </>
-        }
-        badge={pct === null ? undefined : { text: `${pct >= 0 ? "▴" : "▾"} ${Math.abs(pct).toFixed(0)}%`, tone }}
-        text={`${st.early.from}–${String(st.early.to).slice(2)} 대비 ${st.late.from}–${String(st.late.to).slice(2)}`}
-        icon="arrow"
-        color="var(--yellow)"
-        bar={{ left: fmt(vmin), right: fmt(vmax), from: (st.early.mean - vmin) / vspan, to: (st.late.mean - vmin) / vspan, mark: (st.late.mean - vmin) / vspan }}
-      />
-      <KpiCard
-        meta="분석 연수"
-        value={
-          <>
-            {st.n}
-            <small>년</small>
-          </>
-        }
-        text={`${r.start}–${r.end}, ${r.variable.dataset}`}
-        icon="calendar"
-        color="var(--purple)"
-        bar={{ left: "0", right: `${total}년`, from: 0, to: st.n / total }}
-      />
+        sub={`95% 신뢰구간 ${signed(lo)} ~ ${signed(hi)}`}
+      >
+        <div className="ci" aria-label={`신뢰구간 ${signed(lo)}에서 ${signed(hi)}`}>
+          <span className="ci-range" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})` }} />
+          <span className="ci-zero" style={{ left: pos(0) }} />
+          <span className="ci-dot" style={{ left: pos(st.slope_per_decade) }} />
+        </div>
+      </Kpi>
+
+      <Kpi title="추세 판정" icon="filter" value={st.verdict.label} sub="세 검정 중 p < 0.05 인 것이 진하게">
+        <div className="pills">
+          {tests.map((t) => (
+            <span key={t.label} className={`pill-sm ${t.p < 0.05 ? "on" : ""}`} title={pText(t.p)}>
+              {t.label} {t.p < 0.001 ? "<0.001" : t.p.toFixed(3)}
+            </span>
+          ))}
+        </div>
+      </Kpi>
+
+      <Kpi
+        title="초기 → 최근 평균"
+        icon="sort"
+        value={`${fmtNum(st.early.mean)} → ${fmtNum(st.late.mean)}`}
+        unit={unit}
+        sub={`${st.early.from}–${String(st.early.to).slice(2)} 대비 ${st.late.from}–${String(st.late.to).slice(2)}`}
+      >
+        {/* Horizontal bar chart with border radius: 옅은 칸 = 이 기간 최솟값~최댓값 */}
+        <div className="hbars">
+          <span className="hbar">
+            <i style={{ width: rel(st.early.mean), background: "var(--w6)" }} />
+          </span>
+          <span className="hbar">
+            <i style={{ width: rel(st.late.mean) }} />
+          </span>
+        </div>
+      </Kpi>
+
+      <Kpi title="분석 연수" icon="calendar" value={st.n} unit="년" sub={`${r.start}–${r.end}, ${r.variable.dataset}`}>
+        <div className="minibars" aria-label={`자료 있는 해 ${st.n}개`}>
+          {years.map((y) => (
+            <i key={y} title={String(y)} style={{ height: have.has(y) ? "100%" : "30%", background: have.has(y) ? undefined : "var(--bar-off)" }} />
+          ))}
+        </div>
+      </Kpi>
     </div>
   );
 }
 
 /* ======================================================================
-   연도별 추세: Figma Scatter Plot Graph (점 + 곡선, 테두리 격자, 축 이름)
+   연도별 값 + 추세선 ($890.93 넓은 카드: 큰 값 + 차트 버튼 / 둥근 막대, 최고값 점선 MAX)
    ====================================================================== */
-function rowsOf(r: VariableResult) {
-  // 추세선은 양 끝 점만 올 수 있어서 그 직선 위의 값으로 채움
-  const t = r.trend.sen, a = t[0], b = t[t.length - 1];
-  const sen = (y: number) => (a && b && b.year !== a.year ? a.value + ((b.value - a.value) * (y - a.year)) / (b.year - a.year) : undefined);
-  const mine = new Map((r.overlay?.points ?? []).map((p) => [p.year, p.value]));
-  return r.series.map((p) => ({ year: p.year, value: p.value, sen: sen(p.year), mine: mine.get(p.year) }));
-}
-const n2 = (v: number | undefined) => (v === undefined ? "" : String(Math.round(v * 100) / 100));
-
 function downloadCsv(r: VariableResult, region: Region) {
-  const head = ["연도", `${r.variable.name}${r.variable.unit ? ` (${r.variable.unit})` : ""}`, "Sen 추세값", ...(r.overlay ? [r.overlay.label] : [])];
-  const lines = rowsOf(r).map((x) => [x.year, n2(x.value), n2(x.sen), ...(r.overlay ? [n2(x.mine)] : [])].join(","));
-  // 엑셀에서 한글이 깨지지 않게 BOM
-  const blob = new Blob(["﻿" + [head.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${region.id}_${r.variable.id}_${r.start}-${r.end}.csv`;
+  const rows = ["year,value,sen_trend", ...r.series.map((p) => `${p.year},${p.value},${lineAt(r.trend.sen, p.year)?.toFixed(3) ?? ""}`)];
+  const url = URL.createObjectURL(new Blob(["﻿" + rows.join("\n")], { type: "text/csv;charset=utf-8" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `${region.id}_${r.variable.id}_${r.start}-${r.end}.csv` });
   a.click();
-  URL.revokeObjectURL(a.href);
+  URL.revokeObjectURL(url);
 }
 
 export function TrendCard({ r, region }: { r: VariableResult; region: Region }) {
-  const [view, setView] = useState("chart");
+  const [table, setTable] = useState(false);
   const st = r.stats;
   const unit = r.variable.unit;
-  const [lo, hi] = st.ci_per_decade;
+  const peak = st.extremes[0]?.year;
   return (
-    <ChartCard
-      className="fcard-wide"
-      meta={r.variable.name}
-      title="연도별 값과 추세선"
-      value={`${signed(st.slope_per_decade)}${unit} / 10년`}
-      sub={`95% 신뢰구간 ${signed(lo)} ~ ${signed(hi)}${unit}, ${st.method === "sen" ? "Sen" : "OLS"} 기울기 기준`}
-      action={{ icon: "download", label: "CSV 받기", onClick: () => downloadCsv(r, region) }}
-      tabs={[
-        { id: "chart", label: "그래프" },
-        { id: "table", label: "표" },
-      ]}
-      tab={view}
-      onTab={setView}
-      body={{ meta: "판정", title: st.verdict.label, sub: `Mann-Kendall ${pText(st.mk.p)}, t-검정 ${pText(st.ols.p)}` }}
-    >
-      {view === "chart" ? (
-        <TrendChart r={r} />
-      ) : (
-        <div className="frame-table">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">연도</th>
-                <th scope="col">값{unit ? ` (${unit})` : ""}</th>
-                <th scope="col">Sen 추세값</th>
-                {r.overlay && <th scope="col">{r.overlay.label}</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rowsOf(r).map((x) => (
-                <tr key={x.year} {...(x.year === st.leave_out.year ? { "data-peak": "" } : {})}>
-                  <th scope="row">
-                    {x.year}
-                    {x.year === st.leave_out.year && <span className="chip-num">최대 이상치</span>}
-                  </th>
-                  <td>{n2(x.value)}</td>
-                  <td>{n2(x.sen)}</td>
-                  {r.overlay && <td>{n2(x.mine)}</td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <section className="card span-2 trend-card">
+      <header className="card-head">
+        <div className="card-titles">
+          <p className="card-meta">
+            {r.variable.name} · {r.variable.stage}
+          </p>
+          <p className="big num">
+            {signed(st.slope_per_decade)}
+            {unit} <small>/ 10년</small>
+          </p>
+          <p className="card-desc">
+            {st.verdict.label} · Mann-Kendall {pText(st.mk.p)} · {st.method === "sen" ? "Sen" : "OLS"} 기울기
+          </p>
         </div>
-      )}
-    </ChartCard>
+        <div className="head-actions">
+          <button className="chart-btn" aria-pressed={table} onClick={() => setTable((t) => !t)} aria-label={table ? "그래프로 보기" : "표로 보기"} title={table ? "그래프로 보기" : "표로 보기"}>
+            <Icon name={table ? "bars" : "menu"} size={24} />
+          </button>
+          <IconBtn icon="download" label="CSV 내려받기" onClick={() => downloadCsv(r, region)} />
+        </div>
+      </header>
+      <div className="card-body">
+        {table ? (
+          <div className="frame-table" tabIndex={0}>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">연도</th>
+                  <th scope="col">값 ({unit})</th>
+                  <th scope="col">Sen 추세</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.series.map((p) => (
+                  <tr key={p.year} {...(p.year === peak ? { "data-peak": "" } : {})}>
+                    <th scope="row">
+                      {p.year}
+                      {p.year === peak && <span className="pill-sm on">최대 이상치</span>}
+                    </th>
+                    <td>{fmtNum(p.value, 2)}</td>
+                    <td>{fmtNum(lineAt(r.trend.sen, p.year) ?? NaN, 2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <TrendChart r={r} />
+        )}
+      </div>
+      <footer className="card-foot row">
+        <Legend
+          items={[
+            ...(asBars(r)
+              ? [
+                  { label: "해마다 값", color: "var(--bar-off)" },
+                  { label: "가장 큰 해", color: "var(--w3)" },
+                ]
+              : [{ label: "해마다 값", color: "var(--w3)", kind: "line" as const }]),
+            { label: "Sen 추세", color: "var(--dark)", kind: "line" },
+            { label: "OLS 추세", color: "var(--muted)", kind: "dash" },
+            ...(r.overlay ? [{ label: r.overlay.label, color: "var(--good)", kind: "line" as const }] : []),
+          ]}
+        />
+      </footer>
+    </section>
   );
 }
 
 /* ======================================================================
-   산지별 10년당 변화: Figma Level 2 (가운데 기준 양쪽 막대, 초록/빨강 옅은 칸 + 진한 숫자)
+   산지별 10년당 변화 (Horizontal bar chart with border radius: 옅은 알약 칸 + 진한 알약 막대)
+   가운데 0 기준으로 왼쪽 감소 · 오른쪽 증가
    ====================================================================== */
-export function Level2Card({ r, region, onRegion }: { r: VariableResult; region: Region; onRegion: (id: string) => void }) {
-  const hiIs = r.variable.higher_is;
-  const rows = [...r.regions].sort((x, y) => y.slope_per_decade - x.slope_per_decade);
+export function RegionBarsCard({ r, region, onRegion }: { r: VariableResult; region: Region; onRegion: (id: string) => void }) {
+  const rows = [...r.regions].sort((a, b) => b.slope_per_decade - a.slope_per_decade);
   const max = Math.max(...rows.map((x) => Math.abs(x.slope_per_decade)), 1e-9);
-  // 감소 쪽/증가 쪽이 생산자에게 좋은지 나쁜지
-  const side = (dir: "dec" | "inc") => (hiIs === "neutral" ? "neu" : (dir === "inc") === (hiIs === "worse") ? "bad" : "good");
-  const word = { good: "좋아짐", bad: "나빠짐", neu: "중립" } as const;
+  const me = r.regions.find((x) => x.region_id === region.id);
+  const hiIs = r.variable.higher_is;
   return (
-    <ChartCard meta="같은 변수·기간" title="산지별 10년당 변화" sub={`산지 ${rows.length}곳, 막대를 누르면 그 산지로`}>
-      <div className="l2-key">
-        <span>감소</span>
-        <span>
-          <b className={`l2-${side("dec")}`}>{word[side("dec")]}</b>/<b className={`l2-${side("inc")}`}>{word[side("inc")]}</b>
-        </span>
-        <span>증가</span>
-      </div>
-      <ul className="l2">
+    <Card title="산지별 10년당 변화" desc={`같은 지표·기간, ${rows.length}곳. 줄을 누르면 그 산지로`}>
+      {me && <Media name={region.name} sub={region.country} option={<span className="pill dark">{me.label}</span>} />}
+      <ul className="rbars">
         {rows.map((x) => {
           const v = x.slope_per_decade;
           const w = `${(Math.abs(v) / max) * 50}%`;
-          // 표시값이 0.0 이면 방향 없음
-          const s = Math.round(v * 10) === 0 ? "neu" : v < 0 ? side("dec") : side("inc");
+          const tone = toneOf(x.status, x.direction, hiIs);
           return (
             <li key={x.region_id}>
-              <button onClick={() => onRegion(x.region_id)} {...(x.region_id === region.id ? { "aria-current": "true" } : {})}>
-                <span className="l2-name">{x.name}</span>
-                <span className="l2-track">
-                  <span className={`l2-bar l2-${s}`} style={v < 0 ? { right: "50%", width: w } : { left: "50%", width: w }}>
-                    <span className="num">{signed(v)}</span>
-                  </span>
+              <button onClick={() => onRegion(x.region_id)} {...(x.region_id === region.id ? { "aria-current": "true" } : {})} title={`${x.name}: ${x.label}`}>
+                <span className="rb-name">{x.name.replace(/\s*\(.*\)$/, "")}</span>
+                <span className="rb-track">
+                  <i style={{ width: w, [v < 0 ? "right" : "left"]: "50%", background: TONE_VAR[tone] }} />
                 </span>
+                <span className="rb-val num">{signed(v)}</span>
               </button>
             </li>
           );
         })}
       </ul>
-    </ChartCard>
+      <Legend items={(["bad", "good", "mid", "none"] as const).map((t) => ({ label: TONE_TEXT[t], color: TONE_VAR[t] }))} />
+    </Card>
   );
 }
 
 /* ======================================================================
-   해마다 값: Figma Heatmap (색 막대 범례 + 칸 격자). 행 = 10년 단위, 열 = 끝자리 연도
+   해마다 값 (Sales per employee 의 contributions 칸: 4단계 Less → More)
+   행 = 10년 단위, 열 = 끝자리 연도
    ====================================================================== */
-export function HeatmapGrid({ values, higherIs, unit }: { values: YearValue[]; higherIs: Variable["higher_is"]; unit: string }) {
-  const byYear = new Map(values.map((p) => [p.year, p.value]));
-  const vs = values.map((p) => p.value);
-  const lo = Math.min(...vs), hi = Math.max(...vs), span = hi - lo || 1;
-  const first = Math.floor(values[0].year / 10) * 10, last = Math.floor(values[values.length - 1].year / 10) * 10;
-  const decades = Array.from({ length: (last - first) / 10 + 1 }, (_, i) => first + i * 10);
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => fmt(lo + span * t));
+export function HeatGrid({ values, unit }: { values: YearValue[]; unit: string }) {
+  const by = new Map(values.map((p) => [p.year, p.value]));
+  const sorted = values.map((p) => p.value).sort((a, b) => a - b);
+  const q = (f: number) => sorted[Math.min(sorted.length - 1, Math.floor(f * sorted.length))];
+  const cuts = [q(0.25), q(0.5), q(0.75)];
+  const lvl = (v: number) => cuts.filter((c) => v >= c).length;
+  const ys = values.map((p) => p.year);
+  const decades: number[] = [];
+  for (let d = Math.floor(Math.min(...ys) / 10) * 10; d <= Math.max(...ys); d += 10) decades.push(d);
+  const cols = Array.from({ length: 10 }, (_, i) => i);
   return (
     <div className="hm">
-      <span className="hm-scale" style={{ background: heatGradient(higherIs) }} />
-      <div className="hm-ticks num">
-        {ticks.map((t, i) => (
-          <span key={i}>{t}</span>
+      <div className="hm-row hm-cols" aria-hidden>
+        <span />
+        {cols.map((c) => (
+          <span key={c}>{c}</span>
         ))}
       </div>
-      <div className="hm-grid">
-        {decades.map((d) => (
-          <div className="hm-row" key={d}>
-            <span className="hm-lab">{d}년대</span>
-            {Array.from({ length: 10 }, (_, k) => {
-              const y = d + k, v = byYear.get(y);
-              return v === undefined ? (
-                <span key={y} className="hm-cell empty" />
-              ) : (
-                <span key={y} className="hm-cell" style={{ background: scaleColor((v - lo) / span, higherIs) }} title={`${y}년 ${fmt(v)}${unit}`} />
-              );
-            })}
-          </div>
-        ))}
-        <div className="hm-row hm-cols">
-          <span className="hm-lab" />
-          {Array.from({ length: 10 }, (_, k) => (
-            <span key={k} className="num">
-              {k}
-            </span>
-          ))}
+      {decades.map((d) => (
+        <div className="hm-row" key={d}>
+          <span className="hm-lab">{d}년대</span>
+          {cols.map((c) => {
+            const y = d + c;
+            const v = by.get(y);
+            return v === undefined ? (
+              <i key={y} className="hm-cell none" />
+            ) : (
+              <i key={y} className="hm-cell" style={{ background: HEAT_LEVELS[lvl(v)] }} title={`${y}년 ${fmtNum(v)}${unit}`} />
+            );
+          })}
         </div>
+      ))}
+      <div className="hm-key">
+        <span className="muted">칸 하나 = 1년</span>
+        <span className="hm-scale">
+          적음
+          {HEAT_LEVELS.map((c) => (
+            <i key={c} style={{ background: c }} />
+          ))}
+          많음
+        </span>
       </div>
     </div>
   );
 }
 
 export function HeatmapCard({ r }: { r: VariableResult }) {
-  const better = r.variable.higher_is === "better";
   return (
-    <ChartCard meta={r.variable.name} title="해마다 값" sub={`칸 하나가 1년, ${better ? "초록일수록 불리" : "빨강일수록 불리"}`}>
-      <HeatmapGrid values={r.series} higherIs={r.variable.higher_is} unit={r.variable.unit} />
-    </ChartCard>
+    <Card title="해마다 값" desc={`${r.variable.name}. 진할수록 값이 큰 해 (4분위)`}>
+      <HeatGrid values={r.series} unit={r.variable.unit} />
+    </Card>
   );
 }
 
 /* ======================================================================
-   산지 판정 분포: Figma Doughnut Chart (고리 + 퍼센트 + 오른쪽 범례)
+   산지 판정 분포 (Doughnut: 옅은 머리 칸 + 아이콘 제목, 알약 범례, 고리 + 가운데 %, 아래 media)
    ====================================================================== */
-export function DoughnutCard({ r }: { r: VariableResult }) {
-  const order: Tone[] = ["bad", "mid", "good", "none"];
-  const counts = order.map((t) => ({ t, n: r.regions.filter((x) => toneOf(x.status, x.direction, r.variable.higher_is) === t).length })).filter((x) => x.n > 0);
-  const total = r.regions.length || 1;
-  const R = 70, C = 2 * Math.PI * R;
+export function DoughnutCard({ r, region }: { r: VariableResult; region: Region }) {
+  const order: Tone[] = ["bad", "good", "mid", "none"];
+  const counts = order.map((t) => r.regions.filter((x) => toneOf(x.status, x.direction, r.variable.higher_is) === t).length);
+  const total = counts.reduce((a, b) => a + b, 0) || 1;
+  const R = 86, C = 2 * Math.PI * R;
   let acc = 0;
+  const sig = r.regions.filter((x) => x.status === "significant").length;
+  const me = r.regions.find((x) => x.region_id === region.id);
   return (
-    <ChartCard meta="같은 변수·기간" title={`산지 ${r.regions.length}곳 판정`} sub="추세 방향과 유의성 기준">
+    <Card
+      tint
+      icon="doughnut"
+      title={`산지 ${r.regions.length}곳 판정`}
+      desc="같은 지표·기간에서 추세 방향과 유의성"
+      footer={me && <Media name={region.name} sub="지금 보는 산지" option={<span className="pill dark">{me.label}</span>} />}
+    >
+      <Legend items={order.map((t, i) => ({ label: `${TONE_TEXT[t]} ${counts[i]}`, color: TONE_VAR[t] })).filter((_, i) => counts[i] > 0)} />
       <div className="dn">
-        <svg viewBox="0 0 200 200" className="dn-svg" role="img" aria-label={counts.map((c) => `${TONE_TEXT[c.t]} ${c.n}곳`).join(", ")}>
-          {counts.map((c) => {
-            const frac = c.n / total;
-            const start = acc;
-            acc += frac;
-            const mid = (start + frac / 2) * 2 * Math.PI - Math.PI / 2;
-            return (
-              <g key={c.t}>
-                <circle cx="100" cy="100" r={R} fill="none" strokeWidth="30" style={{ stroke: TONE_VAR[c.t] }} strokeDasharray={`${frac * C} ${C}`} strokeDashoffset={-start * C} transform="rotate(-90 100 100)" />
-                {frac >= 0.08 && (
-                  <text x={100 + Math.cos(mid) * R} y={100 + Math.sin(mid) * R + 4} textAnchor="middle" className="dn-pct">
-                    {Math.round(frac * 100)}%
-                  </text>
-                )}
-              </g>
+        <svg viewBox="0 0 240 240" role="img" aria-label={order.map((t, i) => `${TONE_TEXT[t]} ${counts[i]}곳`).join(", ")}>
+          <circle cx="120" cy="120" r={R} fill="none" stroke="var(--fill)" strokeWidth="40" />
+          {order.map((t, i) => {
+            if (!counts[i]) return null;
+            const len = (counts[i] / total) * C;
+            const el = (
+              <circle
+                key={t}
+                cx="120"
+                cy="120"
+                r={R}
+                fill="none"
+                stroke={TONE_VAR[t]}
+                strokeWidth="40"
+                strokeDasharray={`${Math.max(len - 3, 0.1)} ${C}`}
+                strokeDashoffset={-acc}
+                transform="rotate(-90 120 120)"
+              />
             );
+            acc += len;
+            return el;
           })}
+          <text x="120" y="118" textAnchor="middle" className="dn-pct">
+            {Math.round((sig / total) * 100)}%
+          </text>
+          <text x="120" y="142" textAnchor="middle" className="dn-sub">
+            유의함
+          </text>
         </svg>
-        <Key items={counts.map((c) => ({ label: `${TONE_TEXT[c.t]} ${c.n}곳`, color: TONE_VAR[c.t] }))} />
       </div>
-    </ChartCard>
+    </Card>
+  );
+}
+
+/* ======================================================================
+   관측소·위성 검증 (Browser market shares 의 겹친 고리 + 알약 범례)
+   ====================================================================== */
+function Ring({ value, r, color }: { value: number; r: number; color: string }) {
+  const C = 2 * Math.PI * r;
+  return (
+    <>
+      <circle cx="90" cy="90" r={r} fill="none" stroke="var(--fill)" strokeWidth="14" />
+      <circle cx="90" cy="90" r={r} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" strokeDasharray={`${Math.max(0, value) * C} ${C}`} transform="rotate(-90 90 90)" />
+    </>
+  );
+}
+
+export function ValidationCard({ v, variable }: { v: Validation; variable: Variable }) {
+  const st = v.station;
+  const m = v.modis;
+  const sv = variable.station_var;
+  const c = (x: number) => (x > 0 ? `+${x.toFixed(2)}` : x.toFixed(2));
+  // 가운데 숫자: 이 지표가 쓰는 기온 쪽 상관계수 (평균기온·기온 아님이면 최고기온)
+  const useMin = sv === "tmin";
+  return (
+    <Card title="관측소·위성 검증" desc="격자(약 50km) 값이 근처 지상 관측소·1km 위성과 얼마나 맞는지">
+      {st && (
+        <div className="val">
+          <svg viewBox="0 0 180 180" role="img" aria-label={`최고기온 상관 ${st.tmax_corr.toFixed(2)}, 최저기온 상관 ${st.tmin_corr.toFixed(2)}`}>
+            <Ring value={st.tmax_corr} r={74} color="var(--w3)" />
+            <Ring value={st.tmin_corr} r={54} color="var(--w5)" />
+            <text x="90" y="94" textAnchor="middle" className="dn-pct">
+              {(useMin ? st.tmin_corr : st.tmax_corr).toFixed(2)}
+            </text>
+            <text x="90" y="116" textAnchor="middle" className="dn-sub">
+              {useMin ? "최저기온 r" : "최고기온 r"}
+            </text>
+          </svg>
+          <Legend
+            items={[
+              { label: `최고기온 r ${st.tmax_corr.toFixed(2)} · 오차 ${c(st.tmax_bias)}°C`, color: "var(--w3)" },
+              { label: `최저기온 r ${st.tmin_corr.toFixed(2)} · 오차 ${c(st.tmin_bias)}°C`, color: "var(--w5)" },
+            ]}
+          />
+        </div>
+      )}
+      {m && (
+        <p className="val-modis">
+          <b className="num">{m.pixel_spread_mean.toFixed(1)}°C</b>
+          <span>1km 위성(MODIS)으로 보면 같은 격자 안에서도 밤 지표면 온도가 평균 이만큼 차이 남 (최대 {m.pixel_spread_max.toFixed(1)}°C)</span>
+        </p>
+      )}
+      <p className="card-note">
+        {st ? `관측소 ${st.id}, ${st.days.toLocaleString()}일 비교. ` : "근처 지상 관측소 비교 자료 없음. "}
+        {sv ? `이 지표는 ${sv === "tmin" ? "최저기온" : sv === "tmax" ? "최고기온" : "평균기온"} 기반.` : "이 지표는 기온 기반이 아니라 참고용."}
+      </p>
+    </Card>
   );
 }

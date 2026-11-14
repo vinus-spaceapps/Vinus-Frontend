@@ -23,14 +23,14 @@ function Rail() {
     {
       to: canAnalyze ? `/analyze${toSearch({ variables: sel.basket, region: sel.region!, start: sel.start, end: sel.end, thresholds: {} })}` : "/analyze",
       label: "결과",
-      icon: "chart" as IconName,
+      icon: "bars" as IconName,
       enabled: pathname === "/analyze" || canAnalyze,
     },
   ];
   return (
     <aside className="rail">
       <Link to="/" className="rail-logo" aria-label="Vinus 처음 화면">
-        <img src="/logo.svg" width={40} height={28} alt="" />
+        <img src="/logo-mark.png" width={56} height={42} alt="" />
       </Link>
       <Link to="/" className="rail-home" {...(pathname === "/" ? { "aria-current": "page" } : {})}>
         <span className="rail-home-ic">

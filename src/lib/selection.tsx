@@ -2,10 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { StageKey } from "./types";
 
 export const BASKET_LIMIT = 3;
-// 실제 집계 자료(NASA_와인_데이터정리.xlsx)가 2001년부터라 그 앞 연도는 고를 수 없게 함
+// 백엔드 실제 자료가 2001~2026년 (백엔드 AnalyzeRequest 기본값과 같음)
 export const DATA_START = 2001;
-export const DEFAULT_START = 2003;
-export const DEFAULT_END = 2025;
+export const DEFAULT_START = 2001;
+export const DEFAULT_END = 2026;
 
 // 변수 고르기 → 지역 설정 사이에 들고 다니는 선택 상태.
 // 분석 페이지는 URL 쿼리가 기준이고(공유·시연 링크용), 여기 값은 다음 화면의 기본값이 됩니다.

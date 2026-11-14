@@ -1,4 +1,4 @@
-import type { Direction, VerdictStatus } from "./types";
+import type { Direction, VerdictStatus, YearValue } from "./types";
 
 export const signed = (x: number, d = 1) => {
   const s = x.toFixed(d);
@@ -37,3 +37,10 @@ export const TONE_LABEL: Record<ReturnType<typeof trendTone>, string> = {
 export const wideScreen = () => typeof window !== "undefined" && window.innerWidth > 1100;
 
 export const STAGE_LABEL = { budburst: "발아", flowering: "개화", veraison: "착색", harvest: "수확" } as const;
+
+// 추세선은 직선이라 백엔드가 양 끝 두 점만 보냄 → 해마다 값은 두 점 사이를 이어서
+export function lineAt(points: YearValue[], year: number): number | undefined {
+  if (points.length < 2) return points[0]?.value;
+  const [a, b] = [points[0], points[points.length - 1]];
+  return a.value + ((b.value - a.value) * (year - a.year)) / (b.year - a.year || 1);
+}

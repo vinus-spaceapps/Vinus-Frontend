@@ -31,7 +31,7 @@ const CELLS: { key: keyof InsightCard; title: string }[] = [
 function SourceBadge({ source, unverified }: { source: string; unverified: string[] }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span className={`badge ${source === "llm" ? "" : "warn"}`}>{source === "llm" ? "Claude" : "규칙 기반"}</span>
+      <span className={`pill-sm ${source === "llm" ? "" : "warn"}`}>{source === "llm" ? "AI" : "규칙 기반"}</span>
       {unverified.length > 0 && <span className="warn-line">엔진 결과에 없는 숫자 포함: {unverified.join(", ")} (확인 필요)</span>}
     </div>
   );
@@ -108,7 +108,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
             </select>
           )}
           {items.length > 0 && (
-            <button className="btn btn-primary btn-sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
+            <button className="btn pill sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
               ✦ 인사이트 보기
             </button>
           )}
@@ -123,7 +123,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
             <br />
             통계 엔진이 계산한 수치만 사용
           </p>
-          <button className="btn btn-primary" onClick={() => requestCard(decision)}>
+          <button className="btn pill" onClick={() => requestCard(decision)}>
             ✦ 인사이트 보기
           </button>
           <div className="chat-suggest">
