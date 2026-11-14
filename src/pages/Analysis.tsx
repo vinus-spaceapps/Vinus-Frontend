@@ -6,6 +6,7 @@ import TrendChart from "../components/TrendChart";
 import VerdictCard from "../components/VerdictCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
+import { wideScreen } from "../lib/format";
 import { BASKET_LIMIT, DATA_START, DEFAULT_END, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
 import type { AnalysisResponse, AnalyzeQuery, NextStepChange, YearValue } from "../lib/types";
 
@@ -22,9 +23,7 @@ function parseCsv(text: string): YearValue[] {
   return out;
 }
 
-// ponytail: styles.css 의 .an --panel-w 와 같은 식. 둘을 같이 고칠 것
-const panelPad = () => (window.innerWidth > 860 ? Math.min(480, Math.max(360, window.innerWidth * 0.32)) + 32 : 0);
-
+// 결과가 본문, 인사이트 AI(RAG)는 오른쪽 사이드바. 지도는 본문 안의 산지 비교용 카드.
 export default function Analysis() {
   const { search } = useLocation();
   const nav = useNavigate();
@@ -35,15 +34,14 @@ export default function Analysis() {
   const [data, setData] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiInstant, setAiInstant] = useState(false); // 키보드(Esc)로 닫을 때는 애니메이션 없이
+  const [panel, setPanel] = useState(wideScreen);
   const [mapVar, setMapVar] = useState<string | null>(null);
   const [userSeries, setUserSeries] = useState<YearValue[] | null>(null);
   const [userLabel, setUserLabel] = useState("내 기록");
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const aiBtn = useRef<HTMLButtonElement>(null);
+  const openBtn = useRef<HTMLButtonElement>(null);
 
   const stages = useMemo(() => {
     const s = Object.fromEntries(Object.entries(sel.stages).filter(([, v]) => /^\d{2}-\d{2}$/.test(v ?? "")));
@@ -85,19 +83,6 @@ export default function Analysis() {
     if (params) set({ basket: params.variables, region: params.region, start: params.start, end: params.end });
   }, [search]); // 의도적으로 search 만 의존
 
-  // Esc 로 AI 패널 닫고 여는 버튼으로 초점 돌려놓기
-  useEffect(() => {
-    if (!aiOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setAiInstant(true);
-      setAiOpen(false);
-      aiBtn.current?.focus();
-    };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [aiOpen]);
-
   if (!params) return <Navigate to="/variables" replace />;
 
   const update = (patch: Partial<AnalyzeParams>) => nav(`/analyze${toSearch({ ...params, ...patch })}`, { replace: true });
@@ -120,9 +105,8 @@ export default function Analysis() {
   };
 
   const addable = variables.filter((v) => !params.variables.includes(v.id));
-  const shown = data?.results.find((r) => r.variable.id === mapVar) ?? data?.results[0];
-  const region = data?.region ?? regions.find((r) => r.id === params.region);
-  const q = shown?.regions.find((c) => c.region_id === data?.region.id)?.q_mk;
+  const shownMapVar = data?.results.find((r) => r.variable.id === mapVar) ?? data?.results[0];
+  const q = shownMapVar?.regions.find((c) => c.region_id === data?.region.id)?.q_mk;
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
@@ -136,199 +120,199 @@ export default function Analysis() {
   };
 
   return (
-    <main className="an">
-      <div className="an-stage">
-        <div className="an-map">
-          <RegionMap
-            regions={regions}
-            selected={params.region}
-            onSelect={(id) => update({ region: id })}
-            comparison={shown?.regions}
-            unit={shown?.variable.unit}
-            padRight={panelPad()}
-          />
-        </div>
-
-        <div className="glass an-summary">
-          <div className="grp">
-            {params.variables.map((id) => (
-              <span className="chip tag" key={id}>
-                {variables.find((v) => v.id === id)?.name ?? id}
-                {params.variables.length > 1 && (
-                  <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
-                    ×
-                  </button>
-                )}
-              </span>
-            ))}
-            {params.variables.length < BASKET_LIMIT && (
-              <select className="chip-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
-                <option value="">+ 변수</option>
-                {addable.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
+    <main className="container page">
+      <div className={`with-panel ${panel ? "open" : ""}`}>
+        <section>
+          <div className="card summary-bar">
+            <div className="grp">
+              {params.variables.map((id) => (
+                <span className="chip tag" key={id}>
+                  {variables.find((v) => v.id === id)?.name ?? id}
+                  {params.variables.length > 1 && (
+                    <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
+                      ×
+                    </button>
+                  )}
+                </span>
+              ))}
+              {params.variables.length < BASKET_LIMIT && (
+                <select className="chip-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
+                  <option value="">+ 변수</option>
+                  {addable.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <span className="sep" />
+            <select className="chip-select" value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
+              {regions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            <span className="sep" />
+            <div className="grp">
+              <select className="chip-select" value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
+                {YEARS.map((y) => (
+                  <option key={y}>{y}</option>
                 ))}
               </select>
+              <span className="muted">–</span>
+              <select className="chip-select" value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
+                {YEARS.map((y) => (
+                  <option key={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            {loading && <span className="spinner" aria-label="계산 중" />}
+            {data?.is_mock && (
+              <span className="demo-flag" style={{ marginLeft: "auto" }} title="실제 관측값이 아닌 예시 데이터">
+                예시 데이터
+              </span>
             )}
           </div>
-          <span className="sep" />
-          <select className="chip-select" value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-          <span className="sep" />
-          <div className="grp">
-            <select className="chip-select" value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
-              {YEARS.map((y) => (
-                <option key={y}>{y}</option>
-              ))}
-            </select>
-            <span className="muted">–</span>
-            <select className="chip-select" value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
-              {YEARS.map((y) => (
-                <option key={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-          {loading && <span className="spinner" aria-label="계산 중" />}
-          {data?.is_mock && <span className="demo-flag" title="실제 관측값이 아닌 예시 데이터">예시 데이터</span>}
-        </div>
 
-        {query && data && (
-          <>
-            <button ref={aiBtn} className="glass ai-toggle" aria-expanded={aiOpen} aria-controls="ai-panel" onClick={() => {
-                setAiInstant(false);
-                setAiOpen(true);
-              }}>
-              <span aria-hidden>✦</span> 인사이트 AI
-            </button>
-            <div id="ai-panel" className="ai-float" {...(aiOpen ? { "data-open": "" } : {})} {...(aiInstant ? { "data-instant": "" } : {})}>
-              <InsightPanel
-                query={query}
-                vars={data.results.map((r) => ({ id: r.variable.id, name: r.variable.name }))}
-                aiEnabled={!!health?.ai.enabled}
-                onApply={apply}
-                onClose={() => {
-                  setAiOpen(false);
-                  aiBtn.current?.focus();
-                }}
-              />
-            </div>
-          </>
-        )}
-      </div>
-
-      <aside className="an-side" aria-label="분석 결과" aria-busy={loading} {...(loading && data ? { "data-stale": "" } : {})}>
-        <div className="side-scroll">
-          {region && (
-            <header className="side-head">
-              <span className="label">산지</span>
-              <h2>{region.name}</h2>
-              <p className="muted">{region.country}</p>
-              <p className="muted small">{region.blurb}</p>
-            </header>
-          )}
-
-          {error && <div className="error-box">{error}</div>}
-          {notice && <div className="flag">{notice}</div>}
+          {error && <div className="error-box block-gap">{error}</div>}
+          {notice && <div className="flag block-gap">{notice}</div>}
           {!data && !error && (
             <div className="empty">
               <span className="spinner" /> 분석 중…
             </div>
           )}
 
-          {data && shown && (
-            <>
-              {data.results.length > 1 && (
-                <div className="seg var-seg" role="group" aria-label="볼 변수 (지도 색도 이 변수 기준)">
-                  {data.results.map((r) => (
-                    <button key={r.variable.id} aria-pressed={r.variable.id === shown.variable.id} onClick={() => setMapVar(r.variable.id)}>
-                      {r.variable.name}
-                    </button>
-                  ))}
+          {data && (
+            <div className="results" aria-busy={loading} {...(loading ? { "data-stale": "" } : {})}>
+              <div className="analysis-top">
+                <div className="card analysis-map">
+                  <RegionMap regions={regions} selected={data.region.id} onSelect={(id) => update({ region: id })} comparison={shownMapVar?.regions} unit={shownMapVar?.variable.unit} />
                 </div>
-              )}
-
-              <VerdictCard r={shown} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
-
-              <section className="side-sec">
-                <div className="sec-head">
-                  <h3>
-                    {shown.variable.name} <span className="muted small">({shown.variable.unit}, {shown.variable.stage})</span>
-                  </h3>
-                  <span className="muted small">
-                    {shown.variable.dataset}, {shown.variable.resolution}
-                  </span>
+                <div className="card region-info">
+                  <div className="side-head">
+                    <span className="label">산지</span>
+                    <h2>{data.region.name}</h2>
+                    <p className="muted">{data.region.country}</p>
+                  </div>
+                  <p className="muted small">{data.region.blurb}</p>
+                  {data.results.length > 1 && (
+                    <div className="seg var-seg" role="group" aria-label="지도 색 기준 변수">
+                      {data.results.map((r) => (
+                        <button key={r.variable.id} aria-pressed={r.variable.id === shownMapVar?.variable.id} onClick={() => setMapVar(r.variable.id)}>
+                          {r.variable.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="sources">
+                    <p>지도 색: 같은 변수·기간의 산지별 추세 방향. 마커를 누르면 해당 산지로 전환.</p>
+                    {q !== undefined && shownMapVar && (
+                      <p>
+                        다중검정 보정(FDR) q = {q.toFixed(3)} (산지 {shownMapVar.regions.length}곳 비교)
+                      </p>
+                    )}
+                    <p>{data.resolution_note}</p>
+                  </div>
                 </div>
-                <TrendChart r={shown} />
-              </section>
+              </div>
 
-              <section className="side-sec">
+              {data.results.map((r) => (
+                <div key={r.variable.id} className="result-block">
+                  <div className="card chart-card">
+                    <div className="sec-head">
+                      <h3>
+                        {r.variable.name} <span className="muted small">({r.variable.unit}, {r.variable.stage})</span>
+                      </h3>
+                      <span className="muted small">
+                        {r.variable.dataset}, {r.variable.resolution}
+                      </span>
+                    </div>
+                    <TrendChart r={r} />
+                  </div>
+                  <VerdictCard r={r} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [r.variable.id]: v } })} />
+                </div>
+              ))}
+
+              <div className="card upload-card">
                 <div className="sec-head">
                   <h3>
                     내 기록 겹치기 <span className="muted small">(선택)</span>
                   </h3>
                 </div>
                 <p className="muted small">연도,값 형식 CSV (예: 수확량, 서리 피해율). 그래프 오른쪽 축에 표시. 상관관계는 인과관계가 아님.</p>
-                <label className="field-inline">
-                  <span className="muted small">이름</span>
-                  <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} />
-                </label>
-                <label
-                  className="drop"
-                  {...(dragOver ? { "data-over": "" } : {})}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOver(true);
-                  }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOver(false);
-                    void onFile(e.dataTransfer.files[0]);
-                  }}
-                >
-                  <input
-                    type="file"
-                    className="sr-only"
-                    accept=".csv,text/csv,text/plain"
-                    onChange={(e) => {
-                      void onFile(e.target.files?.[0]);
-                      e.target.value = ""; // 같은 파일을 다시 골라도 반영되게
+                <div className="upload-row">
+                  <label className="field-inline">
+                    <span className="muted small">이름</span>
+                    <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} />
+                  </label>
+                  <label
+                    className="drop"
+                    {...(dragOver ? { "data-over": "" } : {})}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
                     }}
-                  />
-                  <span className="btn btn-ghost btn-sm" aria-hidden>
-                    파일 선택
-                  </span>
-                  <span className={`drop-name ${fileName ? "" : "muted"}`}>{fileName ?? "또는 파일을 여기에 끌어 놓기"}</span>
-                </label>
-                {userSeries && (
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    style={{ alignSelf: "flex-start" }}
-                    onClick={() => {
-                      setUserSeries(null);
-                      setFileName(null);
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      void onFile(e.dataTransfer.files[0]);
                     }}
                   >
-                    겹치기 끄기 ({userSeries.length}개 연도)
-                  </button>
-                )}
-              </section>
-
-              <footer className="sources">
-                <p>지도 색: 같은 변수·기간의 산지별 추세 방향. 마커를 누르면 해당 산지로 전환.</p>
-                {q !== undefined && <p>다중검정 보정(FDR) q = {q.toFixed(3)} (산지 {shown.regions.length}곳 비교)</p>}
-                <p>{data.resolution_note}</p>
-              </footer>
-            </>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      accept=".csv,text/csv,text/plain"
+                      onChange={(e) => {
+                        void onFile(e.target.files?.[0]);
+                        e.target.value = ""; // 같은 파일을 다시 골라도 반영되게
+                      }}
+                    />
+                    <span className="btn btn-ghost btn-sm" aria-hidden>
+                      파일 선택
+                    </span>
+                    <span className={`drop-name ${fileName ? "" : "muted"}`}>{fileName ?? "또는 파일을 여기에 끌어 놓기"}</span>
+                  </label>
+                  {userSeries && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setUserSeries(null);
+                        setFileName(null);
+                      }}
+                    >
+                      겹치기 끄기 ({userSeries.length}개 연도)
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-        </div>
-      </aside>
+        </section>
+
+        {/* 닫아도 대화가 남도록 숨기기만. display: contents 라 열려 있을 때는 aside 가 그대로 그리드 칸이 됨 */}
+        {query && data && (
+          <div style={{ display: panel ? "contents" : "none" }}>
+            <InsightPanel
+              query={query}
+              vars={data.results.map((r) => ({ id: r.variable.id, name: r.variable.name }))}
+              aiEnabled={!!health?.ai.enabled}
+              onApply={apply}
+              onClose={() => {
+                setPanel(false);
+                requestAnimationFrame(() => openBtn.current?.focus());
+              }}
+            />
+          </div>
+        )}
+      </div>
+      {!panel && (
+        <button ref={openBtn} className="glass panel-toggle" onClick={() => setPanel(true)}>
+          <span aria-hidden>✦</span> 인사이트 AI
+        </button>
+      )}
     </main>
   );
 }

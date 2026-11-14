@@ -26,7 +26,7 @@ export default function VerdictCard({ r, onThreshold }: Props) {
   const v = r.variable;
 
   return (
-    <section className="verdict">
+    <section className="card verdict">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <span className="where">
           {v.name}, {r.start}–{r.end}년
