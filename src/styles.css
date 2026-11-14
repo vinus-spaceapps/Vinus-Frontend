@@ -306,7 +306,16 @@ details summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .var-seg { border: 1px solid var(--line); flex-wrap: wrap; align-self: flex-start; }
 .sources { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--faint); display: flex; flex-direction: column; gap: 6px; }
 .chart-legend { display: flex; gap: 6px 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
-.chart-legend i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 3px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { display: inline-block; flex: none; }
+.lg-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fg); }
+.lg-ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--fg); }
+.lg-line { width: 16px; height: 2.5px; border-radius: 2px; background: var(--fg); }
+.lg-dash { width: 16px; border-top: 1.5px dashed var(--faint); }
+.chart-tip { display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; border-radius: 8px; font-size: 12px; color: var(--fg);
+  background: rgb(var(--bg-rgb) / .8); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid var(--glass-line); box-shadow: 0 8px 24px rgb(0 0 0 / var(--shadow-a)); }
+.chart-tip span { color: var(--muted); }
+.chart-tip span b { color: var(--fg); font-weight: 600; }
 
 /* 판정 */
 .verdict { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }

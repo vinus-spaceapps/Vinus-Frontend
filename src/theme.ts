@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 // 다크/라이트 테마. 첫 방문은 시스템 설정을 따르고(index.html 의 인라인 스크립트), 고르면 localStorage 에 기억.
 export type Theme = "dark" | "light";
@@ -12,6 +12,16 @@ const subscribe = (cb: () => void) => {
 };
 
 export const useTheme = () => useSyncExternalStore(subscribe, read);
+
+// Recharts 처럼 색을 문자열로 받는 곳용: 지금 테마의 토큰 실제 값
+export function useTokens() {
+  const theme = useTheme();
+  return useMemo(() => {
+    const s = getComputedStyle(root);
+    const g = (n: string) => s.getPropertyValue(n).trim();
+    return { fg: g("--fg"), bg: g("--bg"), muted: g("--muted"), faint: g("--faint"), line: g("--line"), overlay: g("--c1") };
+  }, [theme]);
+}
 
 export function setTheme(t: Theme) {
   const apply = () => {
