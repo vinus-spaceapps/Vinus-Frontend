@@ -85,7 +85,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
   return (
     <ChatPanel
       title="인사이트 AI"
-      subtitle={aiEnabled ? "계산된 결과만 읽고 쉬운 말로 풀어 드려요" : "AI 꺼짐 · 규칙 기반 요약"}
+      subtitle={aiEnabled ? "계산된 결과만 읽고 쉬운 말로 풀어 드려요" : "AI 꺼짐, 규칙 기반으로 요약해요"}
       onClose={onClose}
       onSend={ask}
       busy={busy}
@@ -174,7 +174,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
                 <div className="next-steps">
                   {it.card.next_steps.map((s) => (
                     <button key={s.label} onClick={() => onApply(s.change, activeVar!)}>
-                      → {s.label}
+                      {s.label}
                     </button>
                   ))}
                 </div>

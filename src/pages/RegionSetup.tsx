@@ -37,11 +37,11 @@ export default function RegionSetup() {
     <main className="container page">
       <div className="page-title">
         <div>
-          <h1>② 지역과 기간 정하기</h1>
+          <h1>지역과 기간 정하기</h1>
           <p>지도에서 와인 산지를 누르거나 검색하세요. 분석할 변수: {picked.map((v) => v!.name).join(", ")}</p>
         </div>
         <button className="btn btn-ghost" onClick={() => nav("/variables")}>
-          ← 변수 다시 고르기
+          변수 다시 고르기
         </button>
       </div>
 
@@ -97,7 +97,7 @@ export default function RegionSetup() {
             <div className="avail">
               {picked.map((v) => (
                 <span key={v!.id} className={v!.start_year > sel.start ? "warn" : ""}>
-                  {v!.name}: {v!.dataset} {v!.start_year}~ {v!.start_year > sel.start ? `→ ${v!.start_year}년부터 분석` : ""}
+                  {v!.name}: {v!.dataset} {v!.start_year}~ {v!.start_year > sel.start ? `(${v!.start_year}년부터 분석)` : ""}
                 </span>
               ))}
               {latestStart > sel.start && <span>변수마다 데이터 시작 연도가 달라 자동으로 맞춥니다.</span>}
@@ -127,7 +127,7 @@ export default function RegionSetup() {
           <div className="note-line">결과는 산지 단위(수십 km)이며 밭 하나를 대표하지 않습니다.</div>
 
           <button className="btn btn-primary btn-lg" disabled={!sel.region} onClick={go}>
-            {sel.region ? "분석하기 →" : "산지를 먼저 고르세요"}
+            {sel.region ? "분석하기" : "산지를 먼저 고르세요"}
           </button>
         </div>
       </div>

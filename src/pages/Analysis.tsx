@@ -36,6 +36,7 @@ export default function Analysis() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [aiInstant, setAiInstant] = useState(false); // 키보드(Esc)로 닫을 때는 애니메이션 없이
   const [mapVar, setMapVar] = useState<string | null>(null);
   const [userSeries, setUserSeries] = useState<YearValue[] | null>(null);
   const [userLabel, setUserLabel] = useState("내 기록");
@@ -89,6 +90,7 @@ export default function Analysis() {
     if (!aiOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      setAiInstant(true);
       setAiOpen(false);
       aiBtn.current?.focus();
     };
@@ -193,15 +195,18 @@ export default function Analysis() {
             </select>
           </div>
           {loading && <span className="spinner" aria-label="계산 중" />}
-          {data?.is_mock && <span className="demo-flag">예시 데이터 · 실제 관측 아님</span>}
+          {data?.is_mock && <span className="demo-flag" title="실제 관측값이 아니라 화면 확인용 예시 데이터예요">예시 데이터</span>}
         </div>
 
         {query && data && (
           <>
-            <button ref={aiBtn} className="glass ai-toggle" aria-expanded={aiOpen} aria-controls="ai-panel" onClick={() => setAiOpen(true)}>
+            <button ref={aiBtn} className="glass ai-toggle" aria-expanded={aiOpen} aria-controls="ai-panel" onClick={() => {
+                setAiInstant(false);
+                setAiOpen(true);
+              }}>
               <span aria-hidden>✦</span> 인사이트 AI
             </button>
-            <div id="ai-panel" className="ai-float" {...(aiOpen ? { "data-open": "" } : {})}>
+            <div id="ai-panel" className="ai-float" {...(aiOpen ? { "data-open": "" } : {})} {...(aiInstant ? { "data-instant": "" } : {})}>
               <InsightPanel
                 query={query}
                 vars={data.results.map((r) => ({ id: r.variable.id, name: r.variable.name }))}
@@ -217,7 +222,7 @@ export default function Analysis() {
         )}
       </div>
 
-      <aside className="an-side" aria-label="분석 결과">
+      <aside className="an-side" aria-label="분석 결과" aria-busy={loading} {...(loading && data ? { "data-stale": "" } : {})}>
         <div className="side-scroll">
           {region && (
             <header className="side-head">
@@ -256,7 +261,7 @@ export default function Analysis() {
                     {shown.variable.name} <span className="muted small">({shown.variable.unit}, {shown.variable.stage})</span>
                   </h3>
                   <span className="muted small">
-                    {shown.variable.dataset} · {shown.variable.resolution}
+                    {shown.variable.dataset}, {shown.variable.resolution}
                   </span>
                 </div>
                 <TrendChart r={shown} />

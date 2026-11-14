@@ -16,7 +16,7 @@ function detectText(r: VariableResult): string | null {
 }
 
 // 판정 카드: 엔진 숫자를 쉬운 말로.
-export default function VerdictCard({ r, region, onThreshold }: Props) {
+export default function VerdictCard({ r, onThreshold }: Props) {
   const st = r.stats;
   // 상태는 색이 아니라 배지 모양으로: 유의 = 흰 채움, 엇갈림 = 점선, 유의하지 않음 = 얇은 선
   const badge = st.verdict.status === "significant" ? "sig" : st.verdict.status === "mixed" ? "warn" : "";
@@ -29,7 +29,7 @@ export default function VerdictCard({ r, region, onThreshold }: Props) {
     <section className="verdict">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <span className="where">
-          {region.name} · {v.name} · {r.start}~{r.end}
+          {v.name}, {r.start}–{r.end}년
         </span>
         <span className={r.is_mock ? "demo-flag" : "badge"} title={r.source_note}>
           {r.is_mock ? "예시 데이터" : "NASA 집계"}
@@ -95,11 +95,13 @@ export default function VerdictCard({ r, region, onThreshold }: Props) {
           . {r.overlay.note}
         </div>
       )}
-      {r.notes.map((n) => (
-        <p key={n} className="muted small">
-          · {n}
-        </p>
-      ))}
+      {r.notes.length > 0 && (
+        <ul className="notes muted small">
+          {r.notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

@@ -43,7 +43,7 @@ function Header() {
         )}
         {health && (
           <span className={`badge ${health.ai.enabled ? "" : "warn"}`} title={health.ai.enabled ? health.ai.model : health.ai.reason}>
-            AI {health.ai.enabled ? "켜짐" : "꺼짐 · 규칙 기반"}
+            AI {health.ai.enabled ? "켜짐" : "꺼짐 (규칙 기반)"}
           </span>
         )}
         <div className="seg theme-seg" role="group" aria-label="화면 테마">

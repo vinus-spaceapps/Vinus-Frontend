@@ -67,7 +67,7 @@ export default function VariablePicker() {
         <section>
           <div className="page-title">
             <div>
-              <h1>① 분석할 변수 고르기</h1>
+              <h1>분석할 변수 고르기</h1>
               <p>카드를 누르면 바구니에 담겨요. 마우스를 올리면 쉬운 설명이 나옵니다. 최대 {BASKET_LIMIT}개.</p>
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function VariablePicker() {
             {notice && <span className="warn-line">{notice}</span>}
             <span className="spacer" />
             <button className="btn btn-primary" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
-              다음: 지역 설정 →
+              지역 설정으로
             </button>
           </div>
         </section>
@@ -115,7 +115,7 @@ export default function VariablePicker() {
         {open && (
           <ChatPanel
             title="변수 담기 AI"
-            subtitle={health?.ai.enabled ? "걱정을 말하면 맞는 변수를 담아 드려요" : "AI 꺼짐 · 키워드로 찾아 드려요"}
+            subtitle={health?.ai.enabled ? "걱정을 말하면 맞는 변수를 담아 드려요" : "AI 꺼짐, 키워드로 찾아 드려요"}
             onClose={() => setOpen(false)}
             onSend={send}
             busy={busy}

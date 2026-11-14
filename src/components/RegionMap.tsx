@@ -63,7 +63,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
           const c = comparison?.find((x) => x.region_id === r.id);
           const isSel = r.id === selected;
           const color = c ? TONE_COLOR[trendTone(c.status, c.direction)] : isSel ? "var(--fg)" : "rgb(var(--fg-rgb) / .45)";
-          const sub = c ? `${c.label} · 10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : r.country;
+          const sub = c ? `${c.label}, 10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : r.country;
           return [r.id, orbitIcon(color, isSel, r.name, sub)];
         }),
       ),
