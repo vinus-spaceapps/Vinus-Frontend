@@ -6,13 +6,13 @@ export function useTokens() {
     const s = getComputedStyle(document.documentElement);
     const g = (n: string) => s.getPropertyValue(n).trim();
     return {
-      ink: g("--text"), // Sen 추세선: 흰색
+      ink: g("--text"), // Sen trend line: white
       axis: g("--body"),
-      muted: g("--faint"), // OLS 점선
-      barOff: g("--raised"), // 꺼진 막대
+      muted: g("--faint"), // OLS dashed line
+      barOff: g("--raised"), // inactive bars
       w1: g("--rose"),
-      w3: g("--rose"), // 가장 큰 해·값 선
-      w4: g("--rose"), // 면 그라데이션
+      w3: g("--rose"), // highest year and value line
+      w4: g("--rose"), // area gradient
       blue: g("--good"),
     };
   }, []);

@@ -37,7 +37,7 @@ export default function ChatPanel({ title, subtitle, onClose, children, onSend, 
           <h3>{title}</h3>
           {subtitle && <div className="sub">{subtitle}</div>}
         </div>
-        <button className="ic" onClick={onClose} aria-label="패널 닫기" title="닫기">
+        <button className="ic" onClick={onClose} aria-label="Close panel" title="Close">
           <Icon name="close" size={20} />
         </button>
       </div>
@@ -57,9 +57,9 @@ export default function ChatPanel({ title, subtitle, onClose, children, onSend, 
           submit();
         }}
       >
-        <input className="input pill" value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder ?? "메시지를 입력하세요"} disabled={busy} />
+        <input className="input pill" value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder ?? "Type a message"} disabled={busy} />
         <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
-          전송
+          Send
         </button>
       </form>
     </aside>

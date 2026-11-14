@@ -16,23 +16,23 @@ interface Props {
   aiEnabled: boolean;
   onApply: (change: NextStepChange, varId: string) => void;
   onClose: () => void;
-  current?: string; // 본문에서 보고 있는 변수: 바뀌면 AI 도 그 변수 기준으로
+  current?: string; // indicator shown in the main view: the AI follows it when it changes
 }
 
-const EXAMPLES = ["2020년 영향", "신뢰구간 뜻", "우리 밭 적용 여부", "다른 산지와 비교"];
+const EXAMPLES = ["Impact of 2020", "What’s a confidence interval?", "Does this apply to my vineyard?", "Compare with other regions"];
 
 const CELLS: { key: keyof InsightCard; title: string }[] = [
-  { key: "summary", title: "한 줄 요약" },
-  { key: "numbers", title: "수치" },
-  { key: "confidence", title: "신뢰도" },
-  { key: "meaning", title: "생산자 관점" },
+  { key: "summary", title: "Summary" },
+  { key: "numbers", title: "Numbers" },
+  { key: "confidence", title: "Confidence" },
+  { key: "meaning", title: "For growers" },
 ];
 
 function SourceBadge({ source, unverified }: { source: string; unverified: string[] }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span className={`pill-sm ${source === "llm" ? "" : "warn"}`}>{source === "llm" ? "AI" : "규칙 기반"}</span>
-      {unverified.length > 0 && <span className="warn-line">엔진 결과에 없는 숫자 포함: {unverified.join(", ")} (확인 필요)</span>}
+      <span className={`pill-sm ${source === "llm" ? "" : "warn"}`}>{source === "llm" ? "AI" : "Rule-based"}</span>
+      {unverified.length > 0 && <span className="warn-line">Contains numbers not in the engine results: {unverified.join(", ")} (please verify)</span>}
     </div>
   );
 }
@@ -88,18 +88,18 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
 
   return (
     <ChatPanel
-      title="인사이트 AI"
-      subtitle={aiEnabled ? "통계 결과 해설" : "AI 꺼짐, 규칙 기반 요약"}
+      title="Insight AI"
+      subtitle={aiEnabled ? "Explains the statistical results" : "AI off, rule-based summary"}
       onClose={onClose}
       onSend={ask}
       busy={busy}
-      placeholder="질문 입력"
+      placeholder="Ask a question"
       scrollKey={items.length}
       footer={
         (vars.length > 1 || items.length > 0) && (
         <div className="chat-tools">
           {vars.length > 1 && (
-            <select className="chip-select" value={activeVar} onChange={(e) => setVarId(e.target.value)} aria-label="인사이트 대상 변수">
+            <select className="chip-select" value={activeVar} onChange={(e) => setVarId(e.target.value)} aria-label="Indicator for insight">
               {vars.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}
@@ -109,7 +109,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
           )}
           {items.length > 0 && (
             <button className="btn primary sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
-              ✦ 인사이트 보기
+              ✦ Show insight
             </button>
           )}
         </div>
@@ -119,12 +119,12 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
       {items.length === 0 && !busy && (
         <div className="ai-empty">
           <p className="muted small">
-            현재 그래프와 판정 결과 해설
+            Explains the current chart and verdict
             <br />
-            통계 엔진이 계산한 수치만 사용
+            Uses only numbers from the statistics engine
           </p>
           <button className="btn primary" onClick={() => requestCard(decision)}>
-            ✦ 인사이트 보기
+            ✦ Show insight
           </button>
           <div className="chat-suggest">
             {EXAMPLES.map((q) => (
@@ -137,7 +137,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
       )}
       {items.map((it, i) => {
         if (it.kind === "user") return <div key={i} className="msg user">{it.text}</div>;
-        if (it.kind === "error") return <div key={i} className="msg assistant">응답을 받을 수 없습니다. {it.text}</div>;
+        if (it.kind === "error") return <div key={i} className="msg assistant">Couldn’t get a response. {it.text}</div>;
         if (it.kind === "ask")
           return (
             <div key={i} className="msg assistant">
@@ -157,7 +157,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
           return (
             <div key={i} className="msg assistant">
               {it.text}
-              {it.sources.length > 0 && <div className="muted small" style={{ marginTop: 6 }}>근거: {it.sources.join(", ")}</div>}
+              {it.sources.length > 0 && <div className="muted small" style={{ marginTop: 6 }}>Sources: {it.sources.join(", ")}</div>}
               <div className="src">
                 <SourceBadge source={it.source} unverified={it.unverified} />
               </div>
@@ -165,7 +165,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
           );
         return (
           <div key={i} className="insight">
-            <span className="muted small">{it.varName} 인사이트</span>
+            <span className="muted small">Insight: {it.varName}</span>
             {CELLS.map((c) => (
               <div key={c.key} className={`insight-cell ${c.key === "summary" ? "summary" : ""}`}>
                 <h4>{c.title}</h4>
@@ -174,7 +174,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
             ))}
             {it.card.next_steps.length > 0 && (
               <div className="insight-cell">
-                <h4>추가 확인</h4>
+                <h4>Check next</h4>
                 <div className="next-steps">
                   {it.card.next_steps.map((s) => (
                     <button key={s.label} onClick={() => onApply(s.change, activeVar!)}>
@@ -185,7 +185,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose,
               </div>
             )}
             <div className="insight-cell">
-              <h4>근거</h4>
+              <h4>Sources</h4>
               <span className="small">{it.card.sources.join(", ")}</span>
             </div>
             <SourceBadge source={it.source} unverified={it.unverified} />

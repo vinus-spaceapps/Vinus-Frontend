@@ -2,6 +2,7 @@ import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, Rectangle, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Region, RegionComparison, Variable } from "../lib/types";
+import { deltaUnit, unitText } from "../lib/format";
 import { TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
 import Icon from "./Icon";
 
@@ -9,10 +10,10 @@ interface Props {
   regions: Region[];
   selected: string | null;
   onSelect?: (id: string) => void;
-  comparison?: RegionComparison[]; // 있으면 산지별 추세를 열 지도 색으로
+  comparison?: RegionComparison[]; // if given, color each region by its trend
   unit?: string;
   higherIs?: Variable["higher_is"];
-  zoom?: number; // 산지를 고르면 이 배율까지 다가감 (산지 화면은 분석 범위 네모가 보이게 더 가까이)
+  zoom?: number; // zoom level when a region is picked (closer on the region screen so the analysis box shows)
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -64,13 +65,13 @@ function MapTools({ regions }: { regions: Region[] }) {
   const fit = () => map.flyToBounds(L.latLngBounds(regions.map((r) => [r.lat, r.lon] as [number, number])).pad(0.3), { duration: 0.6 });
   return (
     <div className="map-tools" ref={ref}>
-      <button className="ic" onClick={() => map.zoomIn()} aria-label="확대">
+      <button className="ic" onClick={() => map.zoomIn()} aria-label="Zoom in">
         <Icon name="plus" />
       </button>
-      <button className="ic" onClick={() => map.zoomOut()} aria-label="축소">
+      <button className="ic" onClick={() => map.zoomOut()} aria-label="Zoom out">
         <Icon name="minus" />
       </button>
-      <button className="ic" onClick={fit} aria-label="산지 전체 보기">
+      <button className="ic" onClick={fit} aria-label="Show all regions">
         <Icon name="expand" />
       </button>
     </div>
@@ -86,7 +87,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
         regions.map((r) => {
           const c = comparison?.find((x) => x.region_id === r.id);
           const tone = c ? toneOf(c.status, c.direction, higherIs) : null;
-          const value = c ? `10년에 ${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unit ?? ""}` : null;
+          const value = c ? `${c.slope_per_decade >= 0 ? "+" : ""}${c.slope_per_decade.toFixed(1)}${unitText(deltaUnit(unit ?? ""))} per decade` : null;
           return [r.id, heatIcon(tone, r.id === selected, r.name, value, c ? c.label : r.country)];
         }),
       ),
@@ -97,7 +98,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
     <>
       <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false} zoomControl={false}>
         <TileLayer
-          // 키 없이 쓰는 Esri 다크 그레이 베이스맵 (어두운 화면에 맞춤)
+          // keyless Esri Dark Gray basemap (matches the dark UI)
           url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
@@ -105,7 +106,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
         <FlyTo region={sel} zoom={zoom} />
         <WheelOnClick />
         <MapTools regions={regions} />
-        {/* 고른 산지의 분석 범위 (백엔드 regions.json bbox: 남·북 위도, 서·동 경도) */}
+        {/* Analysis area of the selected region (backend regions.json bbox: south/north lat, west/east lon) */}
         {sel?.bbox && (
           <Rectangle
             bounds={[
@@ -129,7 +130,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
         ))}
       </MapContainer>
       {comparison && (
-        <ul className="map-legend" aria-label="지도 색">
+        <ul className="map-legend" aria-label="Map colors">
           {(["bad", "mid", "good", "none"] as const).map((t) => (
             <li key={t}>
               <i style={{ background: TONE_VAR[t] }} />

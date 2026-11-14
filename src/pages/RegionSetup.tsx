@@ -41,25 +41,25 @@ export default function RegionSetup() {
         </div>
         <div className="wrap page-hero-row">
           <div>
-            <p className="label">2단계</p>
-            <h1>산지와 기간</h1>
-            <p className="lead">고른 변수: {picked.map((v) => v!.name).join(", ")}</p>
+            <p className="label">Step 2</p>
+            <h1>Region and period</h1>
+            <p className="lead">Selected indicators: {picked.map((v) => v!.name).join(", ")}</p>
           </div>
           <button className="btn secondary" onClick={() => nav("/variables")}>
-            변수 바꾸기
+            Change indicators
           </button>
         </div>
       </header>
 
       <div className="wrap region-layout">
-        <Card className="map-card" title="지도" desc="점을 누르면 그 산지로. 점선 네모는 자료를 평균 내는 범위">
+        <Card className="map-card" title="Map" desc="Click a dot to pick that region. The dashed box is the area the data is averaged over">
           <div className="map-frame tall">
             <RegionMap regions={regions} selected={sel.region} onSelect={(id) => set({ region: id })} zoom={6} />
           </div>
         </Card>
 
         <div className="side-stack">
-          <Card title="산지" desc={`${regions.length}곳`}>
+          <Card title="Wine regions" desc={`${regions.length} regions`}>
             <ul className="region-list">
               {regions.map((r) => {
                 const on = r.id === sel.region;
@@ -75,29 +75,29 @@ export default function RegionSetup() {
           </Card>
 
           <Card
-            title="기간"
-            desc={`${sel.start}–${sel.end}, ${sel.end - sel.start + 1}년`}
+            title="Period"
+            desc={`${sel.start}–${sel.end}, ${sel.end - sel.start + 1} years`}
             footer={
               <button className="btn primary block" disabled={!sel.region} onClick={go}>
-                {sel.region ? "분석 시작" : "산지를 고르세요"}
+                {sel.region ? "Start analysis" : "Pick a region"}
               </button>
             }
           >
             <div className="range-dual">
               <div className="range-track" />
               <div className="range-fill" style={{ left: `${pct(sel.start)}%`, width: `${pct(sel.end) - pct(sel.start)}%` }} />
-              <input type="range" min={MIN_YEAR} max={MAX_YEAR} value={sel.start} onChange={(e) => setStart(Number(e.target.value))} aria-label="시작 연도" />
-              <input type="range" min={MIN_YEAR} max={MAX_YEAR} value={sel.end} onChange={(e) => setEnd(Number(e.target.value))} aria-label="끝 연도" />
+              <input type="range" min={MIN_YEAR} max={MAX_YEAR} value={sel.start} onChange={(e) => setStart(Number(e.target.value))} aria-label="Start year" />
+              <input type="range" min={MIN_YEAR} max={MAX_YEAR} value={sel.end} onChange={(e) => setEnd(Number(e.target.value))} aria-label="End year" />
             </div>
             <label className="input">
               <Icon name="calendar" size={18} />
-              <select value={sel.start} onChange={(e) => setStart(Number(e.target.value))} aria-label="시작 연도 선택">
+              <select value={sel.start} onChange={(e) => setStart(Number(e.target.value))} aria-label="Select start year">
                 {years.map((y) => (
                   <option key={y}>{y}</option>
                 ))}
               </select>
               <span className="muted">–</span>
-              <select value={sel.end} onChange={(e) => setEnd(Number(e.target.value))} aria-label="끝 연도 선택">
+              <select value={sel.end} onChange={(e) => setEnd(Number(e.target.value))} aria-label="Select end year">
                 {years.map((y) => (
                   <option key={y}>{y}</option>
                 ))}
@@ -105,17 +105,17 @@ export default function RegionSetup() {
             </label>
             {latestStart > sel.start && (
               <p className="warn-line">
-                {picked.filter((v) => v!.start_year > sel.start).map((v) => `${v!.name}: ${v!.start_year}년부터`).join(", ")}. 변수별 자료 시작 연도에 맞춰 계산.
+                {picked.filter((v) => v!.start_year > sel.start).map((v) => `${v!.name}: data from ${v!.start_year}`).join(", ")}. Each indicator is calculated from its own first data year.
               </p>
             )}
 
             <details>
-              <summary>생육 단계 날짜 (선택)</summary>
-              <p className="card-note">비우면 산지 기본값{region ? ` (${region.name}: 발아 ${region.stages.budburst}, 수확 ${region.stages.harvest})` : ""}</p>
+              <summary>Growth stage dates (optional)</summary>
+              <p className="card-note">Leave blank to use the region defaults{region ? ` (${region.name}: budburst ${region.stages.budburst}, harvest ${region.stages.harvest})` : ""}</p>
               <div className="stage-grid">
                 {STAGES.map((k) => (
                   <label key={k}>
-                    {STAGE_LABEL[k]} (월-일)
+                    {STAGE_LABEL[k]} (MM-DD)
                     <input
                       className="input"
                       placeholder={region?.stages[k] ?? "MM-DD"}
@@ -127,7 +127,7 @@ export default function RegionSetup() {
                 ))}
               </div>
             </details>
-            <p className="card-note">산지 단위(약 50km 격자) 평균. 개별 밭과 다를 수 있음.</p>
+            <p className="card-note">Regional average (about 50 km grid). May differ from individual vineyards.</p>
           </Card>
         </div>
       </div>

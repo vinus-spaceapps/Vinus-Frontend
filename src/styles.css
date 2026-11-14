@@ -1,7 +1,7 @@
-/* Vinus: Starwave 테마 (starwave-podcast source kit)
-   거의 검정(#121212) 편집 공간 + 장미색(#F399B3), 가는 선, 또렷한 흰 글자.
-   글꼴은 Pretendard 하나(제목 400, 본문·UI 400). 버튼 6px 모서리·44px 높이.
-   그림은 장식 대신 실제 값(기후 줄무늬·막대·산지 좌표). */
+/* Vinus: Starwave theme (starwave-podcast source kit)
+   Near-black (#121212) editorial canvas + rose (#F399B3), thin lines, crisp white text.
+   One typeface, Pretendard (headings 400, body/UI 400). Buttons: 6px corners, 44px tall.
+   Graphics show real values instead of decoration (climate stripes, bars, region coordinates). */
 :root {
   --bg: #121212;            /* Background Grey */
   --panel: #0e0e0e;         /* Dark Grey */

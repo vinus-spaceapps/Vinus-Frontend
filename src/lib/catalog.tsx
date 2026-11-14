@@ -60,6 +60,6 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
 export function useCatalog() {
   const ctx = useContext(CatalogContext);
-  if (!ctx) throw new Error("CatalogProvider 밖에서 useCatalog 를 썼습니다");
+  if (!ctx) throw new Error("useCatalog must be used inside CatalogProvider");
   return ctx;
 }

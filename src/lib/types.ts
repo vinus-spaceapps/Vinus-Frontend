@@ -48,7 +48,7 @@ export interface Region {
   country: string;
   lat: number;
   lon: number;
-  bbox?: [number, number, number, number]; // 남·북 위도, 서·동 경도
+  bbox?: [number, number, number, number]; // south/north latitude, west/east longitude
   hemisphere: "N" | "S";
   stages: Record<StageKey, string>;
   blurb: string;

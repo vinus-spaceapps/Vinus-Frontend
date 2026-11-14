@@ -12,7 +12,7 @@ export function toneOf(status: VerdictStatus, direction: Direction, higherIs: Va
 }
 
 export const TONE_VAR: Record<Tone, string> = { bad: "var(--bad)", good: "var(--good)", mid: "var(--mid)", none: "var(--none)" };
-export const TONE_TEXT: Record<Tone, string> = { bad: "나빠지는 중", good: "좋아지는 중", mid: "엇갈림·중립", none: "뚜렷하지 않음" };
+export const TONE_TEXT: Record<Tone, string> = { bad: "Worsening", good: "Improving", mid: "Mixed or neutral", none: "No clear trend" };
 
 // Figma contributions 히트맵의 4단계 (Less → More): 옅음 → 진함
 export const HEAT_LEVELS = ["var(--w9)", "var(--w6)", "var(--w3)", "var(--w1)"];

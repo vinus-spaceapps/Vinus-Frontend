@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import Stripes, { MiniBars } from "../components/Stripes";
+import { MiniBars } from "../components/Stripes";
+import MoonHero from "../components/MoonHero";
 import { useCatalog } from "../lib/catalog";
 import { toSearch, useSelection } from "../lib/selection";
 
@@ -10,36 +11,36 @@ const GDD = [1853, 1696, 1600, 1760, 1792, 1701, 1778, 1786, 1719, 1785, 1653, 1
 // 예시: 실제 결과에서 고른 질문. 각 카드의 막대는 그 지표의 해마다 값.
 const DEMOS = [
   {
-    tag: "병해·습도",
-    region: "충북 영동",
-    q: "덥고 습한 날이 늘었나?",
-    fact: "10년에 +9.7일, 유의함",
+    tag: "Disease & humidity",
+    region: "Yeongdong",
+    q: "Are hot, humid days becoming more common?",
+    fact: "+9.7 days per decade, significant",
     values: [20, 15, 3, 22, 12, 23, 23, 21, 2, 27, 8, 23, 25, 11, 16, 26, 26, 25, 25, 18, 19, 33, 28, 56, 39, 41],
     params: { variables: ["hot_humid_days", "tropical_nights"], region: "yeongdong", start: 2001, end: 2026, thresholds: {} },
   },
   {
-    tag: "기온·서리",
-    region: "보르도",
-    q: "수확기 밤이 더워졌나?",
-    fact: "10년에 +7.6일, 유의함",
+    tag: "Temperature & frost",
+    region: "Bordeaux",
+    q: "Are harvest nights getting warmer?",
+    fact: "+7.6 days per decade, significant",
     values: [20, 17, 32, 29, 17, 20, 10, 14, 24, 14, 29, 28, 18, 26, 22, 30, 21, 31, 25, 35, 28, 43, 41, 25, 33, 46],
     params: { variables: ["harvest_warm_nights", "harvest_tmin_mean"], region: "bordeaux", start: 2001, end: 2026, thresholds: {} },
   },
   {
-    tag: "기온·서리",
-    region: "부르고뉴",
-    q: "서리는 줄었는데, 싹튼 뒤 서리도?",
-    fact: "연간 서리일수 10년에 −16일, 유의함",
+    tag: "Temperature & frost",
+    region: "Burgundy",
+    q: "Frost is down overall, but what about after budburst?",
+    fact: "Annual frost days: −16 per decade, significant",
     values: [78, 71, 87, 97, 110, 49, 92, 101, 90, 85, 62, 91, 61, 71, 54, 73, 70, 68, 49, 75, 73, 59, 38, 60, 42],
     params: { variables: ["annual_frost_days", "frost_after_budburst"], region: "burgundy", start: 2001, end: 2026, thresholds: {} },
   },
 ];
 
 const STEPS = [
-  ["변수 고르기", "서리, 폭염, 수확기 비 같은 지표 949개 중 최대 3개. 걱정을 문장으로 쓰면 AI가 골라 줍니다."],
-  ["산지와 기간", "산지 7곳, 2001–2026년. 밭의 발아·수확 날짜를 넣으면 그 시기로 다시 계산합니다."],
-  ["추세 계산", "연도별 값에 Sen 기울기와 95% 신뢰구간을 구해 10년당 변화로 보여 줍니다."],
-  ["판정과 검증", "두 가지 검정, 가장 튄 해를 뺀 재검정, 지상 관측소·위성 비교까지 거칩니다."],
+  ["Pick indicators", "Choose up to 3 of 949 indicators, such as frost, heatwaves and harvest rain. Describe your worry in a sentence and the AI picks them for you."],
+  ["Region and period", "7 wine regions, 2001–2026. Enter your vineyard’s budburst and harvest dates to recalculate for those windows."],
+  ["Compute the trend", "Fits a Sen slope with a 95% confidence interval to the yearly values and shows the change per decade."],
+  ["Verdict and checks", "Two significance tests, a re-test without the most extreme year, and a comparison with weather stations and satellites."],
 ];
 
 // 지표 묶음마다 그 묶음이 하는 일을 그린 작은 선 그림
@@ -89,22 +90,22 @@ const FAMILY_ART = {
 } as const;
 
 const FAMILIES = [
-  { id: "core", name: "핵심 지표", n: 100, d: "서리일수, 적산온도, 병해 위험일처럼 정의와 근거를 사람이 하나씩 쓴 지표", wide: true },
-  { id: "etccdi", name: "기후 극값 지수", n: 27, d: "세계기상기구 표준(ETCCDI). 논문 속 다른 지역 결과와 바로 비교", wide: true },
-  { id: "extremes", name: "평년 대비 극값 일수", n: 100, d: "2001–2010년 기준 상위·하위 10% 날이 얼마나 잦아졌는지" },
-  { id: "stats", name: "월·계절 기본 통계", n: 722, d: "달·계절·생육 단계별 기온, 강수, 습도, 토양수분, 일사, 바람" },
-  { id: "ai", name: "질문으로 찾기", n: null, d: "‘봄 서리가 걱정돼’처럼 쓰면 맞는 지표를 바구니에 담아 줌" },
+  { id: "core", name: "Core indicators", n: 100, d: "Indicators like frost days, growing degree days and disease-risk days, each with a hand-written definition and rationale", wide: true },
+  { id: "etccdi", name: "Climate extremes indices", n: 27, d: "The World Meteorological Organization standard (ETCCDI). Compare directly with published results for other regions", wide: true },
+  { id: "extremes", name: "Days beyond normal", n: 100, d: "How much more often the top and bottom 10% of days (vs. 2001–2010) now occur" },
+  { id: "stats", name: "Monthly & seasonal stats", n: 722, d: "Temperature, precipitation, humidity, soil moisture, solar radiation and wind by month, season and growth stage" },
+  { id: "ai", name: "Ask a question", n: null, d: "Type something like ‘I’m worried about spring frost’ and matching indicators go into your basket" },
 ] as const;
 
 const FAQ = [
-  ["‘유의함’은 무슨 뜻인가요?", "추세가 없다고 가정할 때 이만한 변화가 우연히 나올 확률(p값)이 5% 미만이라는 뜻입니다. Mann-Kendall과 t-검정이 모두 이 기준을 넘어야 ‘유의함’, 하나만 넘으면 ‘엇갈림’으로 판정합니다."],
-  ["10년당 변화는 어떻게 구하나요?", "연도별 값에 맞춘 직선의 기울기에 10을 곱한 값입니다. 튀는 해가 많은 지표는 중앙값 기반의 Sen 기울기를 씁니다."],
-  ["우리 밭에도 그대로 맞나요?", "아닙니다. 값은 약 50km 격자의 평균입니다. 결과 화면의 관측소·위성 검증에서 격자와 실제 관측의 차이를 볼 수 있습니다."],
-  ["자료는 어디서 오나요?", "NASA POWER(MERRA-2·CERES) 일별 자료, MODIS 위성, GPM IMERG 강수, GLDAS 토양수분입니다. 연기 지표 2개(AIRS·OMI)는 아직 실제 집계가 없어 예시 값을 쓰고, 결과 화면에 표시됩니다."],
-  ["AI 해설은 믿어도 되나요?", "AI는 통계 엔진이 미리 계산한 숫자만 쓰도록 묶여 있습니다. 답에 엔진에 없는 숫자가 나오면 따로 표시합니다."],
+  ["What does ‘significant’ mean?", "It means that, if there were no trend, the chance of seeing a change this large by luck (the p-value) is under 5%. A trend is ‘significant’ only when both Mann-Kendall and the t-test pass this bar; if only one does, the verdict is ‘tests disagree’."],
+  ["How is the change per decade calculated?", "It is the slope of a straight line fitted to the yearly values, multiplied by 10. Indicators with many outlier years use the median-based Sen slope."],
+  ["Does it apply directly to my vineyard?", "No. Values are averages over a grid cell of about 50 km. The weather station and satellite checks on the results page show how the grid compares with real observations."],
+  ["Where does the data come from?", "NASA POWER (MERRA-2, CERES) daily data and the MODIS satellite (night-time land surface temperature, green-up date). The two smoke indicators (AIRS, OMI) don’t have real data yet, so they use sample values, which are flagged on the results page."],
+  ["Can I trust the AI explanations?", "The AI is restricted to numbers the statistics engine has already calculated. If an answer contains a number the engine didn’t produce, it is flagged."],
 ];
 
-const SOURCES = ["MERRA-2", "CERES", "MODIS", "GPM IMERG", "GLDAS", "NASA POWER", "AIRS", "OMI"];
+const SOURCES = ["MERRA-2", "CERES", "MODIS", "NASA POWER", "AIRS", "OMI"];
 
 // 세 가지 확인 아이콘 (원 안의 가는 선 그림)
 const CHECK_ART = {
@@ -136,17 +137,17 @@ function ResultPreview() {
   const lo = 1550, hi = 2200;
   const x = (i: number) => 10 + (i / (GDD.length - 1)) * 280;
   const y = (v: number) => 110 - ((v - lo) / (hi - lo)) * 100;
-  const slope = 12.354; // °C·일 / 년 (10년당 +123.5)
+  const slope = 12.354; // °C·days per year (+123.5 per decade)
   const rest = GDD.map((v, i) => v - slope * i).sort((a, b) => a - b);
   const b = (rest[12] + rest[13]) / 2;
   return (
-    <figure className="preview" aria-label="충북 영동 생육기 적산온도 2001–2026, 10년에 123.5°C·일 증가, 유의함">
+    <figure className="preview" aria-label="Yeongdong growing-season growing degree days, 2001–2026: up 123.5 °C·days per decade, significant">
       <figcaption>
-        <span className="tag">기온·서리</span>
-        <span>충북 영동 · 생육기 적산온도</span>
+        <span className="tag">Temperature & frost</span>
+        <span>Yeongdong · Growing-season GDD</span>
       </figcaption>
       <p className="preview-num num">
-        +123.5<small>°C·일 / 10년</small>
+        +123.5<small>°C·days / decade</small>
       </p>
       <svg viewBox="0 0 300 120" aria-hidden>
         <path className="grid" d="M10 110h280M10 60h280M10 10h280" />
@@ -157,7 +158,7 @@ function ResultPreview() {
         <line className="trend" x1={x(0)} y1={y(b)} x2={x(GDD.length - 1)} y2={y(b + slope * (GDD.length - 1))} />
       </svg>
       <div className="preview-foot">
-        <span className="pill-sm on">증가, 유의함</span>
+        <span className="pill-sm on">Increasing, significant</span>
         <span className="pill-sm">Mann-Kendall p &lt; 0.001</span>
         <span className="pill-sm">2001–2026</span>
       </div>
@@ -171,7 +172,7 @@ function RegionGrid() {
   const X = (lon: number) => lon + 180;
   const Y = (lat: number) => 90 - lat;
   return (
-    <svg className="globe" viewBox="0 15 360 135" role="img" aria-label={`산지 ${regions.length}곳 위치: ${regions.map((r) => r.name).join(", ")}`}>
+    <svg className="globe" viewBox="0 15 360 135" role="img" aria-label={`Locations of ${regions.length} wine regions: ${regions.map((r) => r.name).join(", ")}`}>
       {[-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150].map((lon) => (
         <line key={lon} className="grat" x1={X(lon)} x2={X(lon)} y1={15} y2={150} />
       ))}
@@ -180,7 +181,7 @@ function RegionGrid() {
       ))}
       <line className="equator" x1={0} x2={360} y1={90} y2={90} />
       <text className="glabel" x={4} y={87}>
-        적도
+        Equator
       </text>
       {regions.map((r) => (
         <g key={r.id}>
@@ -204,35 +205,34 @@ export default function Landing() {
 
   return (
     <main className="landing">
-      {/* 첫 화면: 가운데 제목 + 뒤에 영동 적산온도 기후 줄무늬 (한 줄 = 한 해) */}
+      {/* Hero: centered title over a rose moon rising above a wine surface */}
       <section className="hero">
-        <Stripes values={GDD} className="hero-stripes" />
+        <MoonHero />
         <div className="hero-copy">
           <img className="hero-mark" src="/logo-wordmark-white.png" width={150} height={43} alt="Vinus" />
           <h1>
-            우리 산지의 기후 변화,
+            Your region’s climate change,
             <br />
-            체감 말고 NASA 데이터로
+            in NASA data, not gut feel
           </h1>
-          <p>산지 7곳의 2001–2026년 위성·재분석 자료로 서리, 더위, 비, 병해 위험이 정말 변하고 있는지 계산합니다.</p>
+          <p>Using 2001–2026 satellite and reanalysis data for 7 wine regions, Vinus calculates whether frost, heat, rain and disease risk are really changing.</p>
           <div className="row-btns">
             <Link className="btn primary" to="/variables">
-              분석 시작
+              Start analysis
             </Link>
             <button className="btn secondary" onClick={() => openDemo(DEMOS[0])}>
-              예시 보기
+              See an example
             </button>
           </div>
         </div>
-        <p className="stripes-note">배경 줄무늬: 충북 영동 생육기 적산온도, 2001년(왼쪽)부터 2026년까지. 밝을수록 더운 해.</p>
       </section>
 
       <section className="wrap intro">
-        <p className="label">와인 기후 추세 탐정</p>
+        <p className="label">Wine climate trend detective</p>
         <p className="intro-text">
-          해마다 ‘올해는 유난히 덥다’는 말을 듣습니다. Vinus는 그 느낌이 실제 추세인지, 몇 해의 우연인지를 NASA 자료와 통계 검정으로 가려 줍니다. 생산자가 품종, 방제, 수확 시기, 시설 투자를 정할 때 쓸 수 있게요.
+          Every year you hear ‘it’s unusually hot this year.’ Vinus uses NASA data and statistical tests to tell whether that feeling is a real trend or just a few chance years, so growers can rely on it when deciding on varieties, disease control, harvest timing and equipment investment.
         </p>
-        <ul className="sources" aria-label="사용 자료">
+        <ul className="sources" aria-label="Data sources">
           {SOURCES.map((s) => (
             <li key={s}>{s}</li>
           ))}
@@ -241,11 +241,11 @@ export default function Landing() {
 
       <section className="wrap steps">
         <div>
-          <p className="label">이렇게 계산합니다</p>
+          <p className="label">How it works</p>
           <h2>
-            느낌을 숫자로,
+            From feeling to numbers,
             <br />
-            숫자를 판정으로
+            from numbers to a verdict
           </h2>
           <ol>
             {STEPS.map(([t, d], i) => (
@@ -262,14 +262,14 @@ export default function Landing() {
         <ResultPreview />
       </section>
 
-      {/* 산지 7곳 좌표 + 세 가지 확인 */}
+      {/* Coordinates of the 7 regions + the three checks */}
       <section className="wrap checks-sec">
-        <p className="label center">통계 엔진</p>
+        <p className="label center">Statistics engine</p>
         <h2 className="center">
-          추세가 진짜인지
-          <br />세 번 확인합니다
+          Is the trend real?
+          <br />We check three times
         </h2>
-        <p className="lead center">AI는 엔진이 계산한 숫자만 해설합니다. 숫자를 지어내지 않습니다.</p>
+        <p className="lead center">The AI only explains numbers the engine calculated. It never makes numbers up.</p>
         <div className="globe-wrap">
           <RegionGrid />
           <ul className="globe-names">
@@ -285,9 +285,9 @@ export default function Landing() {
         <div className="checks">
           {(
             [
-              ["tests", "두 가지 검정", "Mann-Kendall과 t-검정이 모두 p < 0.05일 때만 ‘유의함’."],
-              ["leave", "한 해 빼고 다시", "가장 튄 해를 빼도 결론이 같은지 다시 계산합니다."],
-              ["ground", "땅 위 관측과 비교", "근처 기상 관측소와 1km 위성으로 격자 값을 점검합니다."],
+              ["tests", "Two tests", "‘Significant’ only when Mann-Kendall and the t-test both give p < 0.05."],
+              ["leave", "Drop a year, re-run", "Recalculates without the most extreme year to see if the conclusion holds."],
+              ["ground", "Check against the ground", "Compares grid values with nearby weather stations and 1 km satellite data."],
             ] as const
           ).map(([k, t, d]) => (
             <div key={k}>
@@ -302,14 +302,14 @@ export default function Landing() {
       <section className="wrap topics">
         <div className="sec-head">
           <div>
-            <p className="label">지표 묶음</p>
+            <p className="label">Indicator families</p>
             <h2>
-              지표 949개,
+              949 indicators,
               <br />
-              네 가지 묶음
+              four families
             </h2>
           </div>
-          <p className="sec-aside">핵심 지표는 정의와 근거를 하나씩 쓴 것, 나머지는 같은 원자료로 만든 표준 지수입니다.</p>
+          <p className="sec-aside">Core indicators each have a hand-written definition and rationale; the rest are standard indices built from the same raw data.</p>
         </div>
         <div className="topic-grid">
           {FAMILIES.map((f) => (
@@ -330,17 +330,17 @@ export default function Landing() {
       <section className="wrap demos">
         <div className="sec-head">
           <div>
-            <p className="label">예시 분석</p>
-            <h2>이런 질문에 답합니다</h2>
+            <p className="label">Example analyses</p>
+            <h2>Questions Vinus answers</h2>
           </div>
           <Link className="btn primary" to="/variables">
-            직접 고르기
+            Choose your own
           </Link>
         </div>
         <div className="demo-grid">
           {DEMOS.map((d) => (
             <article key={d.q} className="demo">
-              <MiniBars values={d.values} label={`${d.region} 해마다 값, ${d.fact}`} />
+              <MiniBars values={d.values} label={`${d.region} yearly values, ${d.fact}`} />
               <div className="demo-meta">
                 <span className="tag">{d.tag}</span>
                 <span>{d.region}</span>
@@ -348,7 +348,7 @@ export default function Landing() {
               <h3>{d.q}</h3>
               <p className="demo-fact">{d.fact}</p>
               <button className="btn primary sm" onClick={() => openDemo(d)}>
-                결과 보기
+                See results
               </button>
             </article>
           ))}
@@ -357,11 +357,11 @@ export default function Landing() {
 
       <section className="wrap faq">
         <div>
-          <p className="label">자주 묻는 질문</p>
+          <p className="label">FAQ</p>
           <h2>
-            결과를
+            Before you
             <br />
-            읽기 전에
+            read the results
           </h2>
         </div>
         <div className="faq-list">
@@ -379,8 +379,9 @@ export default function Landing() {
 
       <footer className="wrap footer">
         <img src="/logo-wordmark-white.png" width={110} height={32} alt="Vinus" />
-        <p>NASA Space Apps Challenge 2026 서울, 과제 ‘Be An Earth System Trend Detective’. 팀 율촌.</p>
-        <p className="muted">결과는 산지 단위(약 50km) 평균이며 개별 밭을 대표하지 않습니다.</p>
+        <p>NASA Space Apps Challenge 2026 Seoul, challenge ‘Be An Earth System Trend Detective’. Team Yulchon.</p>
+        <p className="muted">Results are regional averages (about 50 km) and don’t represent individual vineyards.</p>
+        <p className="muted">The Vinus logo was made with an AI image generation tool. (AI-generated logo)</p>
       </footer>
     </main>
   );
