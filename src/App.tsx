@@ -61,6 +61,9 @@ function Rail() {
           })}
         </ol>
       </nav>
+      <Link to="/variables" className="rail-cta" aria-label="새 분석 시작" title="새 분석 시작">
+        <Icon name="plus" size={18} />
+      </Link>
     </aside>
   );
 }

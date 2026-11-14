@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import InsightPanel from "../components/InsightPanel";
-import { CardHead, FlowCard, PeriodPill, RegionTrendCard, TrendCard } from "../components/DashCards";
+import { CardHead, FlowCard, KpiRow, RegionBarsCard, TrendCard } from "../components/DashCards";
 import Icon from "../components/Icon";
 import RegionMap from "../components/RegionMap";
 import VerdictCard from "../components/VerdictCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
-import { pText, signed, wideScreen } from "../lib/format";
+import { wideScreen } from "../lib/format";
 import { BASKET_LIMIT, DATA_START, DEFAULT_END, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
 import type { AnalysisResponse, AnalyzeQuery, NextStepChange, YearValue } from "../lib/types";
 
@@ -120,94 +120,88 @@ export default function Analysis() {
     }
   };
 
-  const st = shown?.stats;
-  const dirWord = st ? ({ increase: "증가", decrease: "감소", flat: "변화 없음" } as const)[st.verdict.direction] : "";
-  const statusWord = st ? ({ significant: "유의함", mixed: "검정 엇갈림", not_significant: "유의하지 않음" } as const)[st.verdict.status] : "";
+  const today = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
 
   return (
     <main className="page an-page">
       <div className={`with-panel ${panel ? "open" : ""}`}>
         <div className="an-main">
-          <header className="page-head">
-            <div className="ph-left">
+          {/* Figma Header: 제목 + 날짜 / 오른쪽 조건 입력 + 도움(인사이트 AI) 버튼 */}
+          <header className="dash-head">
+            <div className="dash-titles">
               <h1>{data?.region.name ?? regions.find((r) => r.id === params.region)?.name ?? "분석 결과"}</h1>
-              <p className="ph-sub">{shown ? `${shown.variable.name} 분석 결과` : "분석 결과"}</p>
-              {/* 조건 줄: 레퍼런스의 검색 줄 자리. 좁으면 가로로 스크롤 */}
-              <div className="filter-line" role="toolbar" aria-label="분석 조건">
-                <Icon name="filter" size={16} />
-                {params.variables.map((id) => (
-                  <span className="chip tag" key={id}>
-                    {variables.find((v) => v.id === id)?.name ?? id}
-                    {params.variables.length > 1 && (
-                      <button onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label="변수 빼기">
-                        ×
-                      </button>
-                    )}
-                  </span>
-                ))}
-                {params.variables.length < BASKET_LIMIT && (
-                  <select className="chip-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
-                    <option value="">+ 변수</option>
-                    {addable.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <select className="chip-select" value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
+              <p>
+                {shown ? `${shown.variable.name} 분석` : "분석 결과"}, {today}
+              </p>
+            </div>
+            <div className="dash-tools">
+              <label className="field">
+                <Icon name="pin" size={16} />
+                <select value={params.region} onChange={(e) => update({ region: e.target.value })} aria-label="산지">
                   {regions.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
                     </option>
                   ))}
                 </select>
-                <select className="chip-select" value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
+              </label>
+              <label className="field">
+                <Icon name="calendar" size={16} />
+                <select value={params.start} onChange={(e) => update({ start: Math.min(Number(e.target.value), params.end - 5) })} aria-label="시작 연도">
                   {YEARS.map((y) => (
                     <option key={y}>{y}</option>
                   ))}
                 </select>
                 <span className="muted">–</span>
-                <select className="chip-select" value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
+                <select value={params.end} onChange={(e) => update({ end: Math.max(Number(e.target.value), params.start + 5) })} aria-label="끝 연도">
                   {YEARS.map((y) => (
                     <option key={y}>{y}</option>
                   ))}
                 </select>
-                {loading && <span className="spinner" aria-label="계산 중" />}
-              </div>
+              </label>
+              <button ref={openBtn} className="help-btn" aria-pressed={panel} aria-label="인사이트 AI" title="인사이트 AI" onClick={() => setPanel((p) => !p)}>
+                <Icon name="sparkle" size={20} />
+              </button>
             </div>
-
-            {shown && st && (
-              <dl className="kpi-cluster">
-                <div>
-                  <dt>10년당 변화</dt>
-                  <dd>
-                    <b className="num">
-                      {signed(st.slope_per_decade)}
-                      <small>{shown.variable.unit}</small>
-                    </b>
-                    <span className="pill">
-                      95% {signed(st.ci_per_decade[0])}~{signed(st.ci_per_decade[1])}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>추세 판정</dt>
-                  <dd>
-                    <b>{dirWord}</b>
-                    <span className={`pill ${st.verdict.status === "significant" ? "solid" : st.verdict.status === "mixed" ? "dashed" : ""}`}>{statusWord}</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Mann-Kendall</dt>
-                  <dd>
-                    <b className="num">{pText(st.mk.p).replace("p ", "")}</b>
-                    <span className="pill">t-검정 {pText(st.ols.p).replace("p ", "")}</span>
-                  </dd>
-                </div>
-              </dl>
-            )}
           </header>
+
+          {/* 변수: 고른 변수 칩(빼기·더하기) + 지금 보는 변수 탭 */}
+          <div className="var-row">
+            <div className="tabs-figma" role="group" aria-label="볼 변수">
+              {params.variables.map((id) => {
+                const name = variables.find((v) => v.id === id)?.name ?? id;
+                const on = shown ? shown.variable.id === id : id === params.variables[0];
+                return (
+                  <span key={id} className="tab-chip" {...(on ? { "data-on": "" } : {})}>
+                    <button onClick={() => setActive(id)} aria-pressed={on}>
+                      {name}
+                    </button>
+                    {params.variables.length > 1 && (
+                      <button className="x" onClick={() => update({ variables: params.variables.filter((v) => v !== id) })} aria-label={`${name} 빼기`}>
+                        <Icon name="close" size={12} />
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
+              {params.variables.length < BASKET_LIMIT && (
+                <select className="tab-add" value="" onChange={(e) => e.target.value && update({ variables: [...params.variables, e.target.value] })} aria-label="변수 추가">
+                  <option value="">+ 변수</option>
+                  {addable.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            {loading && <span className="spinner" aria-label="계산 중" />}
+            {data?.is_mock && (
+              <span className="demo-flag" title="실제 관측값이 아닌 예시 데이터">
+                예시 데이터
+              </span>
+            )}
+          </div>
 
           {error && <div className="error-box block-gap">{error}</div>}
           {notice && <div className="flag block-gap">{notice}</div>}
@@ -219,31 +213,16 @@ export default function Analysis() {
 
           {data && shown && (
             <div className="results" aria-busy={loading} {...(loading ? { "data-stale": "" } : {})}>
-              {(data.results.length > 1 || data.is_mock) && (
-                <div className="an-subbar">
-                  {data.results.length > 1 && (
-                    <div className="seg var-tabs" role="group" aria-label="볼 변수">
-                      {data.results.map((r) => (
-                        <button key={r.variable.id} aria-pressed={r.variable.id === shown.variable.id} onClick={() => setActive(r.variable.id)}>
-                          {r.variable.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {data.is_mock && (
-                    <span className="demo-flag" title="실제 관측값이 아닌 예시 데이터">
-                      예시 데이터
-                    </span>
-                  )}
-                </div>
-              )}
+              <KpiRow r={shown} />
 
-              <div className="dash">
-                <RegionTrendCard r={shown} region={data.region} onRegion={(id) => update({ region: id })} />
+              <div className="row-wide">
+                <TrendCard r={shown} region={data.region} />
+                <RegionBarsCard r={shown} region={data.region} onRegion={(id) => update({ region: id })} />
+              </div>
+
+              <div className="row-three">
                 <section className="card dash-card">
-                  <CardHead title="산지 지도">
-                    <PeriodPill start={shown.start} end={shown.end} />
-                  </CardHead>
+                  <CardHead title="산지 지도" sub="산지를 누르면 그 산지로 전환" />
                   <div className="map-frame">
                     <RegionMap
                       regions={regions}
@@ -256,16 +235,13 @@ export default function Analysis() {
                   </div>
                 </section>
                 <FlowCard r={shown} />
-                <TrendCard r={shown} region={data.region} />
+                <VerdictCard r={shown} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
               </div>
 
-              <div className="detail-grid">
-                <VerdictCard r={shown} region={data.region} onThreshold={(v) => update({ thresholds: { ...params.thresholds, [shown.variable.id]: v } })} />
-
-                <section className="card upload-card">
-                  <CardHead title="내 기록 겹치기" />
-                  <p className="muted small">연도,값 형식 CSV (예: 수확량, 서리 피해율). 그래프 오른쪽 축에 표시. 상관관계는 인과관계가 아님.</p>
-                  <label className="field-inline">
+              <section className="card upload-card">
+                <CardHead title="내 기록 겹치기" sub="연도,값 형식 CSV. 예: 수확량, 서리 피해율. 상관관계는 인과관계가 아님." />
+                <div className="upload-row">
+                  <label className="field">
                     <span className="muted small">이름</span>
                     <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} />
                   </label>
@@ -300,7 +276,6 @@ export default function Analysis() {
                   {userSeries && (
                     <button
                       className="btn btn-ghost btn-sm"
-                      style={{ alignSelf: "flex-start" }}
                       onClick={() => {
                         setUserSeries(null);
                         setFileName(null);
@@ -309,11 +284,11 @@ export default function Analysis() {
                       겹치기 끄기 ({userSeries.length}개 연도)
                     </button>
                   )}
-                  <p className="card-note sources">
-                    {data.region.blurb} {data.resolution_note}
-                  </p>
-                </section>
-              </div>
+                </div>
+                <p className="card-note">
+                  {data.region.blurb} {data.resolution_note}
+                </p>
+              </section>
             </div>
           )}
         </div>
@@ -335,11 +310,6 @@ export default function Analysis() {
           </div>
         )}
       </div>
-      {!panel && (
-        <button ref={openBtn} className="glass panel-toggle" onClick={() => setPanel(true)}>
-          <Icon name="sparkle" size={16} /> 인사이트 AI
-        </button>
-      )}
     </main>
   );
 }

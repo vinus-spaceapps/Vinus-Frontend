@@ -1,28 +1,22 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { signed } from "../lib/format";
+import { pText, signed } from "../lib/format";
 import type { Region, Variable, VariableResult, YearValue } from "../lib/types";
-import { scaleColor, TONE_VAR, toneOf } from "../tone";
+import { heatGradient, scaleColor, TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
 import Icon, { type IconName } from "./Icon";
 import TrendChart from "./TrendChart";
 
 const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1));
 
-/* ---------- 공통: 카드 머리 + ⋮ 메뉴 ---------- */
-export function CardHead({ title, children }: { title: string; children?: ReactNode }) {
+/* ---------- 공통: 카드 머리 (Figma Header: 제목 + 부제 + 오른쪽 아이콘 버튼) ---------- */
+export function CardHead({ title, sub, children }: { title: string; sub?: string; children?: ReactNode }) {
   return (
     <header className="card-head">
-      <h2>{title}</h2>
+      <div className="card-titles">
+        <h2>{title}</h2>
+        {sub && <p>{sub}</p>}
+      </div>
       {children && <div className="card-tools">{children}</div>}
     </header>
-  );
-}
-
-export function PeriodPill({ start, end }: { start: number; end: number }) {
-  return (
-    <span className="pill">
-      <Icon name="calendar" size={14} />
-      {start}–{end}
-    </span>
   );
 }
 
@@ -43,7 +37,7 @@ function CardMenu({ items }: { items: { label: string; icon: IconName; onClick: 
   return (
     <div className="menu" ref={box}>
       <button className="icon-btn" aria-haspopup="menu" aria-expanded={open} aria-label="더 보기" onClick={() => setOpen((o) => !o)}>
-        <Icon name="dots" />
+        <Icon name="dots" size={16} />
       </button>
       {open && (
         <div className="menu-pop" role="menu">
@@ -66,70 +60,166 @@ function CardMenu({ items }: { items: { label: string; icon: IconName; onClick: 
   );
 }
 
-/* ---------- 1. 산지별 10년당 변화: 게이지 + 점선 목록 ---------- */
-function Gauge({ fraction, higherIs, children }: { fraction: number; higherIs: Variable["higher_is"]; children: ReactNode }) {
-  const gid = useId().replace(/:/g, "");
-  // 270° 열린 호 (아래가 비어 있음). pathLength=100 이라 대시 길이 = 퍼센트
-  const d = "M 43.4 156.6 A 80 80 0 1 1 156.6 156.6";
-  const f = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
-  return (
-    <div className="gauge">
-      <svg viewBox="0 0 200 200" aria-hidden>
-        <defs>
-          <linearGradient id={gid} x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor={scaleColor(0, higherIs)} />
-            <stop offset=".5" stopColor={scaleColor(0.5, higherIs)} />
-            <stop offset="1" stopColor={scaleColor(1, higherIs)} />
-          </linearGradient>
-        </defs>
-        <path d={d} pathLength={100} className="gauge-track" />
-        <path d={d} pathLength={100} className="gauge-fill" stroke={`url(#${gid})`} style={{ strokeDashoffset: 100 - f }} />
-      </svg>
-      <div className="gauge-c">{children}</div>
-    </div>
-  );
+/* ---------- KPI 카드 (Figma Cards: 이름 / 값 + 변화 배지 / 보조 문구 / 진행 막대) ---------- */
+interface Bar {
+  left: string;
+  right: string;
+  from: number; // 0~1
+  to: number; // 0~1
+  mark?: number; // 0~1 점 추정치 등
+  tick?: number; // 0~1 기준선
+  tone?: Tone;
 }
-
-export function RegionTrendCard({ r, region, onRegion }: { r: VariableResult; region: Region; onRegion: (id: string) => void }) {
-  const hi = r.variable.higher_is;
-  const rows = [...r.regions].sort((a, b) => b.slope_per_decade - a.slope_per_decade);
-  const vals = rows.map((x) => x.slope_per_decade);
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const me = r.stats.slope_per_decade;
-  const rank = rows.findIndex((x) => x.region_id === region.id) + 1;
+function KpiCard({ meta, value, badge, sub, icon, tint, bar }: { meta: string; value: ReactNode; badge?: { text: string; tone: Tone }; sub: string; icon: IconName; tint: string; bar: Bar }) {
+  const c = (x: number) => `${Math.min(100, Math.max(0, x * 100))}%`;
   return (
-    <section className="card dash-card">
-      <CardHead title="산지별 10년당 변화">
-        <PeriodPill start={r.start} end={r.end} />
-      </CardHead>
-      <div className="rt-body">
-        <Gauge fraction={max === min ? 0.5 : (me - min) / (max - min)} higherIs={hi}>
-          <b className="num">
-            {signed(me)}
-            <small>{r.variable.unit}</small>
-          </b>
-          <span>
-            {rows.length}곳 중 {rank}번째로 큼
-          </span>
-        </Gauge>
-        <ul className="leader-list">
-          {rows.map((x) => (
-            <li key={x.region_id}>
-              <button onClick={() => onRegion(x.region_id)} {...(x.region_id === region.id ? { "aria-current": "true" } : {})}>
-                <i style={{ background: TONE_VAR[toneOf(x.status, x.direction, hi)] }} />
-                <span className="nm">{x.name}</span>
-                <span className="leader" aria-hidden />
-                <span className="num">{signed(x.slope_per_decade)}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+    <section className={`kpi-card ${tint}`}>
+      <div className="kpi-top">
+        <div className="kpi-text">
+          <p className="kpi-meta">{meta}</p>
+          <div className="kpi-value">
+            <b className="num">{value}</b>
+            {badge && <span className={`delta ${badge.tone}`}>{badge.text}</span>}
+          </div>
+        </div>
+        <span className="kpi-ic" aria-hidden>
+          <Icon name={icon} size={16} />
+        </span>
+      </div>
+      <p className="kpi-sub">{sub}</p>
+      <div className="kpi-bar">
+        <div className="kpi-bar-labels num">
+          <span>{bar.left}</span>
+          <span>{bar.right}</span>
+        </div>
+        <div className="kpi-track">
+          <i style={{ left: c(Math.min(bar.from, bar.to)), width: c(Math.abs(bar.to - bar.from)), ...(bar.tone ? { background: TONE_VAR[bar.tone] } : {}) }} />
+          {bar.tick !== undefined && <span className="kpi-tick" style={{ left: c(bar.tick) }} />}
+          {bar.mark !== undefined && <em style={{ left: c(bar.mark) }} />}
+        </div>
       </div>
     </section>
   );
 }
 
-/* ---------- 2. 기간별 흐름: 굵기 = 값, 색 = 값 크기 ---------- */
+export function KpiRow({ r }: { r: VariableResult }) {
+  const st = r.stats;
+  const unit = r.variable.unit;
+  const tone = toneOf(st.verdict.status, st.verdict.direction, r.variable.higher_is);
+  const arrow = st.verdict.direction === "increase" ? "▴" : st.verdict.direction === "decrease" ? "▾" : "–";
+  const dir = { increase: "증가", decrease: "감소", flat: "변화 없음" }[st.verdict.direction];
+
+  // 1) 10년당 변화: 신뢰구간을 막대로, 추정치를 점으로
+  const [lo, hi] = st.ci_per_decade;
+  const a = Math.min(lo, 0), b = Math.max(hi, 0), span = b - a || 1;
+  const pos = (v: number) => (v - a) / span;
+
+  // 2) 판정: p값을 0~0.1 눈금에, 0.05 기준선
+  const pMax = 0.1;
+
+  // 3) 초기 → 최근: 관측 범위 안에서 어디서 어디로 옮겨 갔나
+  const vs = r.series.map((p) => p.value);
+  const vmin = Math.min(...vs), vmax = Math.max(...vs), vspan = vmax - vmin || 1;
+  const pct = Math.abs(st.early.mean) > 1e-9 ? ((st.late.mean - st.early.mean) / Math.abs(st.early.mean)) * 100 : null;
+
+  // 4) 분석 연수: 기간 대비 자료가 있는 해
+  const total = r.end - r.start + 1;
+
+  return (
+    <div className="kpi-row">
+      <KpiCard
+        meta="10년당 변화"
+        value={
+          <>
+            {signed(st.slope_per_decade)}
+            <small>{unit}</small>
+          </>
+        }
+        badge={{ text: `${arrow} ${dir}`, tone }}
+        sub={`95% 신뢰구간, ${st.method === "sen" ? "Sen" : "OLS"} 기울기`}
+        icon="chart"
+        tint="t-purple"
+        bar={{ left: signed(lo), right: signed(hi), from: pos(lo), to: pos(hi), mark: pos(st.slope_per_decade), tick: pos(0), tone }}
+      />
+      <KpiCard
+        meta="추세 판정"
+        value={st.verdict.label}
+        sub={`Mann-Kendall ${pText(st.mk.p)}, 기준 0.05`}
+        icon="check"
+        tint="t-blue"
+        bar={{ left: "p 0", right: "0.1 이상", from: 0, to: Math.min(st.mk.p, pMax) / pMax, mark: Math.min(st.mk.p, pMax) / pMax, tick: 0.5, tone: st.mk.p < 0.05 ? "good" : "none" }}
+      />
+      <KpiCard
+        meta="초기 → 최근 평균"
+        value={
+          <>
+            {fmt(st.early.mean)} → {fmt(st.late.mean)}
+            <small>{unit}</small>
+          </>
+        }
+        badge={pct === null ? undefined : { text: `${pct >= 0 ? "▴" : "▾"} ${Math.abs(pct).toFixed(0)}%`, tone }}
+        sub={`${st.early.from}–${String(st.early.to).slice(2)} 대비 ${st.late.from}–${String(st.late.to).slice(2)}`}
+        icon="arrow"
+        tint="t-orange"
+        bar={{ left: `최저 ${fmt(vmin)}`, right: `최고 ${fmt(vmax)}`, from: (st.early.mean - vmin) / vspan, to: (st.late.mean - vmin) / vspan, mark: (st.late.mean - vmin) / vspan, tone }}
+      />
+      <KpiCard
+        meta="분석 연수"
+        value={
+          <>
+            {st.n}
+            <small>년</small>
+          </>
+        }
+        sub={`${r.start}–${r.end}, ${r.variable.dataset}`}
+        icon="calendar"
+        tint="t-yellow"
+        bar={{ left: "0", right: `${total}년`, from: 0, to: st.n / total }}
+      />
+    </div>
+  );
+}
+
+/* ---------- 산지별 10년당 변화 (Figma Histogram → 가로 막대, 0 기준선) ---------- */
+export function RegionBarsCard({ r, region, onRegion }: { r: VariableResult; region: Region; onRegion: (id: string) => void }) {
+  const hi = r.variable.higher_is;
+  const rows = [...r.regions].sort((x, y) => y.slope_per_decade - x.slope_per_decade);
+  const vals = rows.map((x) => x.slope_per_decade);
+  const lo = Math.min(0, ...vals), top = Math.max(0, ...vals), span = top - lo || 1;
+  const xp = (v: number) => ((v - lo) / span) * 100;
+  return (
+    <section className="card dash-card">
+      <CardHead title="산지별 10년당 변화" sub={`같은 변수·기간, 산지 ${rows.length}곳`} />
+      <ul className="key" aria-label="막대 색">
+        {(["bad", "mid", "good", "none"] as const).map((t) => (
+          <li key={t}>
+            <i style={{ background: TONE_VAR[t] }} />
+            {TONE_TEXT[t]}
+          </li>
+        ))}
+      </ul>
+      <ul className="hbars">
+        {rows.map((x) => {
+          const v = x.slope_per_decade;
+          return (
+            <li key={x.region_id}>
+              <button onClick={() => onRegion(x.region_id)} {...(x.region_id === region.id ? { "aria-current": "true" } : {})}>
+                <span className="nm">{x.name}</span>
+                <span className="hb-track" aria-hidden>
+                  <span className="hb-zero" style={{ left: `${xp(0)}%` }} />
+                  <span className="hb-bar" style={{ left: `${Math.min(xp(0), xp(v))}%`, width: `${Math.max(Math.abs(xp(v) - xp(0)), 0.8)}%`, background: TONE_VAR[toneOf(x.status, x.direction, hi)] }} />
+                </span>
+                <span className="num">{signed(v)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/* ---------- 기간별 흐름: 굵기 = 값, 색 = 값 크기 (Figma 히트맵 색 막대 범례) ---------- */
 type Pt = [number, number];
 // Catmull-Rom → 베지어. 시작점 M 없이 C 구간만 돌려줌
 function curve(pts: Pt[]): string {
@@ -176,8 +266,8 @@ export function StreamBand({ values: raw, higherIs, marks = [], height = 190 }: 
             ))}
           </linearGradient>
         </defs>
-        <path d={band(1.9)} fill={`url(#${gid})`} opacity={0.16} />
-        <path d={band(1.4)} fill={`url(#${gid})`} opacity={0.32} />
+        <path d={band(1.9)} fill={`url(#${gid})`} opacity={0.18} />
+        <path d={band(1.4)} fill={`url(#${gid})`} opacity={0.35} />
         <path d={band(1)} fill={`url(#${gid})`} />
       </svg>
       {marks.map((m) => (
@@ -196,31 +286,25 @@ export function FlowCard({ r }: { r: VariableResult }) {
   const first = r.series[0]?.year ?? r.start, last = r.series[r.series.length - 1]?.year ?? r.end;
   const at = (y: number) => (last === first ? 0.5 : (y - first) / (last - first));
   const mean = r.series.reduce((s, p) => s + p.value, 0) / (r.series.length || 1);
-  const pct = Math.abs(st.early.mean) > 1e-9 ? ((st.late.mean - st.early.mean) / Math.abs(st.early.mean)) * 100 : null;
+  const vs = r.series.map((p) => p.value);
   const yy = (a: number, b: number) => `${a}–${String(b).slice(2)}`;
+  const better = r.variable.higher_is === "better";
   return (
     <section className="card dash-card">
-      <CardHead title="기간별 흐름" />
-      <dl className="trio">
-        <div>
-          <dt>초기 평균</dt>
-          <dd className="num">
-            {fmt(st.early.mean)}
-            <small>{unit}</small>
-          </dd>
+      <CardHead title="기간별 흐름" sub="3년 이동평균, 굵기와 색이 값" />
+      <div className="heat-scale">
+        <span className="heat-bar" style={{ background: heatGradient(r.variable.higher_is) }} />
+        <div className="heat-ticks num">
+          <span>
+            {fmt(Math.min(...vs))}
+            {unit} {better ? "불리" : "유리"}
+          </span>
+          <span>
+            {fmt(Math.max(...vs))}
+            {unit} {better ? "유리" : "불리"}
+          </span>
         </div>
-        <div>
-          <dt>최근 평균</dt>
-          <dd className="num">
-            {fmt(st.late.mean)}
-            <small>{unit}</small>
-          </dd>
-        </div>
-        <div>
-          <dt>변화</dt>
-          <dd className="num">{pct === null ? "–" : `${pct > 0 ? "+" : ""}${pct.toFixed(0)}%`}</dd>
-        </div>
-      </dl>
+      </div>
       <StreamBand
         values={r.series}
         higherIs={r.variable.higher_is}
@@ -230,12 +314,11 @@ export function FlowCard({ r }: { r: VariableResult }) {
           { at: at((st.late.from + st.late.to) / 2), top: fmt(st.late.mean), bottom: yy(st.late.from, st.late.to) },
         ]}
       />
-      <p className="card-note">띠 굵기와 색: 3년 이동평균 값 (클수록 굵고, 생산자에게 불리한 쪽일수록 붉게)</p>
     </section>
   );
 }
 
-/* ---------- 3. 연도별 추세: 그래프 ↔ 표, CSV 받기 ---------- */
+/* ---------- 연도별 추세: 그래프 ↔ 표, CSV 받기 ---------- */
 function rowsOf(r: VariableResult) {
   // 추세선은 양 끝 점만 올 수 있어서 그 직선 위의 값으로 채움
   const t = r.trend.sen, a = t[0], b = t[t.length - 1];
@@ -261,8 +344,8 @@ export function TrendCard({ r, region }: { r: VariableResult; region: Region }) 
   const [table, setTable] = useState(false);
   const unit = r.variable.unit;
   return (
-    <section className="card dash-card">
-      <CardHead title="연도별 추세">
+    <section className="card dash-card trend-card">
+      <CardHead title="연도별 추세" sub={`${r.variable.name}${unit ? ` (${unit})` : ""}, ${r.start}–${r.end}`}>
         <CardMenu
           items={[
             table ? { label: "그래프로 보기", icon: "chart", onClick: () => setTable(false) } : { label: "표로 보기", icon: "table", onClick: () => setTable(true) },
