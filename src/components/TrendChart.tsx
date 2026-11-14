@@ -1,5 +1,5 @@
 import { Area, Bar, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { fmtNum, lineAt, signed } from "../lib/format";
+import { deltaUnit, fmtNum, lineAt, signed, unitText, withUnit } from "../lib/format";
 import type { VariableResult } from "../lib/types";
 import { useTokens } from "../theme";
 
@@ -18,18 +18,15 @@ function Tip({ active, payload, unit }: { active?: boolean; payload?: { payload:
   const diff = p.sen !== undefined ? p.value - p.sen : null;
   return (
     <div className="tip">
-      <small>{p.year}년</small>
-      <b>
-        {fmtNum(p.value, 2)}
-        {unit}
-      </b>
+      <small>{p.year}</small>
+      <b>{withUnit(fmtNum(p.value, 2), unit)}</b>
       {diff !== null && (
         <small>
-          추세보다 {signed(diff)}
-          {unit}
+          {signed(diff)}
+          {unitText(deltaUnit(unit))} vs trend
         </small>
       )}
-      {p.overlay !== undefined && <small>내 기록 {fmtNum(p.overlay, 2)}</small>}
+      {p.overlay !== undefined && <small>My records {fmtNum(p.overlay, 2)}</small>}
     </div>
   );
 }
@@ -51,7 +48,7 @@ export default function TrendChart({ r }: { r: VariableResult }) {
   const axis = { tickLine: false, axisLine: false, tick: { fill: t.axis, fontSize: 12 } } as const;
 
   return (
-    <div className="trend" role="img" aria-label={`${r.variable.name} 연도별 값과 추세선, ${r.start}–${r.end}`}>
+    <div className="trend" role="img" aria-label={`${r.variable.name}: yearly values and trend lines, ${r.start}–${r.end}`}>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={data} margin={{ top: 22, right: r.overlay ? 8 : 40, left: 0, bottom: 0 }} barCategoryGap="18%">
           <defs>
@@ -79,7 +76,7 @@ export default function TrendChart({ r }: { r: VariableResult }) {
           <Line dataKey="ols" stroke={t.muted} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} isAnimationActive={false} />
           <Line dataKey="sen" stroke={t.ink} strokeWidth={2.5} dot={false} activeDot={false} isAnimationActive={false} />
           {r.overlay && <Line yAxisId="ov" dataKey="overlay" stroke={t.blue} strokeWidth={2} dot={{ r: 3, fill: t.blue, strokeWidth: 0 }} connectNulls isAnimationActive={false} />}
-          {/* 툴팁은 포인터에 바로 붙게 (기본 400ms 미끄러짐 끔), 어두운 바탕용 옅은 흰 커서 */}
+          {/* Tooltip sticks to the pointer (default 400ms slide off), faint white cursor for the dark background */}
           <Tooltip content={<Tip unit={unit} />} cursor={{ fill: "rgb(255 255 255 / 0.05)" }} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>

@@ -1,3 +1,4 @@
+import { withUnit } from "../lib/format";
 import type { Category, Variable } from "../lib/types";
 import Icon from "./Icon";
 
@@ -8,7 +9,7 @@ interface Props {
   onToggle: () => void;
 }
 
-const AGG = { count: "날수", sum: "합계", mean: "평균", min: "최솟값", max: "최댓값" } as const;
+const AGG = { count: "Day count", sum: "Total", mean: "Mean", min: "Minimum", max: "Maximum" } as const;
 
 // 핵심 지표 카드 (Starwave 에피소드 카드: 태그 + 오른쪽 메타 / 제목 / 설명 / 흰 버튼). 마우스·초점을 주면 지표 md 설명 팝오버.
 export default function VariableCard({ v, category, inBasket, onToggle }: Props) {
@@ -23,11 +24,11 @@ export default function VariableCard({ v, category, inBasket, onToggle }: Props)
       <span className="vcard-foot">
         <span className={`btn sm ${inBasket ? "secondary" : "primary"}`} aria-hidden>
           <Icon name={inBasket ? "check" : "plus"} size={16} />
-          {inBasket ? "담음" : "담기"}
+          {inBasket ? "Added" : "Add"}
         </span>
         <span className="muted">
           {AGG[v.aggregation] ?? v.aggregation}
-          {!v.has_real_data && ", 예시 데이터"}
+          {!v.has_real_data && ", sample data"}
         </span>
       </span>
       <span className="popover" role="tooltip">
@@ -35,23 +36,23 @@ export default function VariableCard({ v, category, inBasket, onToggle }: Props)
         {v.sections.definition}
         {v.sections.why && (
           <>
-            <span className="lbl">의미</span>
+            <span className="lbl">Why it matters</span>
             {v.sections.why}
           </>
         )}
         <dl>
-          <dt>단위</dt>
+          <dt>Unit</dt>
           <dd>{v.unit}</dd>
-          <dt>시기</dt>
+          <dt>Period</dt>
           <dd>{v.stage}</dd>
-          <dt>조건</dt>
+          <dt>Condition</dt>
           <dd>
             {v.condition}
-            {v.threshold !== null ? ` (기본 ${v.threshold}${v.threshold_unit})` : ""}
+            {v.threshold !== null ? ` (default ${withUnit(v.threshold, v.threshold_unit)})` : ""}
           </dd>
-          <dt>출처</dt>
+          <dt>Source</dt>
           <dd>{v.source}</dd>
-          <dt>해상도</dt>
+          <dt>Resolution</dt>
           <dd>{v.resolution}</dd>
         </dl>
       </span>

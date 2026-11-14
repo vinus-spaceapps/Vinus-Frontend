@@ -45,7 +45,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     try {
       sessionStorage.setItem(KEY, JSON.stringify(sel));
     } catch {
-      /* 저장 불가 환경은 무시 */
+      /* ignore environments where storage is unavailable */
     }
   }, [sel]);
 
@@ -64,7 +64,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
 
 export function useSelection() {
   const ctx = useContext(SelectionContext);
-  if (!ctx) throw new Error("SelectionProvider 밖에서 useSelection 을 썼습니다");
+  if (!ctx) throw new Error("useSelection must be used inside SelectionProvider");
   return ctx;
 }
 

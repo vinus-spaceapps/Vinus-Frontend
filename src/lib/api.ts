@@ -23,15 +23,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
-    throw new ApiError("서버에 연결할 수 없어요. 백엔드(Vinus-Backend)가 켜져 있는지 확인해 주세요.");
+    throw new ApiError("Can’t reach the server. Please check that the backend (Vinus-Backend) is running.");
   }
   if (!res.ok) {
-    let detail = `요청 실패 (${res.status})`;
+    let detail = `Request failed (${res.status})`;
     try {
       const body = await res.json();
       if (typeof body.detail === "string") detail = body.detail;
     } catch {
-      /* 본문 없음 */
+      /* no body */
     }
     throw new ApiError(detail);
   }

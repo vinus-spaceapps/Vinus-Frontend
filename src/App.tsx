@@ -13,7 +13,7 @@ export default function App() {
   return (
     <div className="app">
       {pathname !== "/" && (
-        <Link to="/" className="home-link" aria-label="처음 화면">
+        <Link to="/" className="home-link" aria-label="Home">
           <img src="/logo-mark-rose.png" width={34} height={25} alt="" />
           <span>Vinus</span>
         </Link>
@@ -21,12 +21,12 @@ export default function App() {
       {error ? (
         <div className="wrap">
           <div className="error-box">
-            <b>자료를 불러오지 못했습니다.</b> {error}
+            <b>Couldn’t load data.</b> {error}
           </div>
         </div>
       ) : loading ? (
         <div className="wrap empty">
-          <span className="spinner" /> 불러오는 중
+          <span className="spinner" /> Loading…
         </div>
       ) : (
         <Routes>

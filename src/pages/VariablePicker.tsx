@@ -14,12 +14,12 @@ interface UiMsg extends ChatMsg {
   meta?: Pick<VariableChatResponse, "add" | "source">;
 }
 
-const SUGGESTIONS = ["봄 서리 피해", "수확기 곰팡이병", "적산온도란?", "열대야"];
+const SUGGESTIONS = ["Spring frost damage", "Fungal disease at harvest", "What are growing degree days?", "Tropical nights"];
 const PAGE = 40;
 
 const WELCOME: UiMsg = {
   role: "assistant",
-  content: "걱정되는 기후 문제를 입력하면 관련 변수를 추천합니다. 변수 뜻도 물어볼 수 있습니다.",
+  content: "Describe a climate concern and I’ll recommend related indicators. You can also ask what an indicator means.",
 };
 
 export default function VariablePicker() {
@@ -49,7 +49,7 @@ export default function VariablePicker() {
 
   const toggle = (id: string) => {
     if (sel.basket.includes(id)) return removeVar(id);
-    if (!addVar(id)) setNotice(`최대 ${BASKET_LIMIT}개까지 선택할 수 있습니다.`);
+    if (!addVar(id)) setNotice(`You can select up to ${BASKET_LIMIT}.`);
     else setNotice(null);
   };
 
@@ -70,7 +70,7 @@ export default function VariablePicker() {
       });
       setMsgs([...next, { role: "assistant", content: res.reply, meta: { add: added, source: res.source } }]);
     } catch (e) {
-      setMsgs([...next, { role: "assistant", content: `응답을 받을 수 없습니다. ${(e as Error).message}` }]);
+      setMsgs([...next, { role: "assistant", content: `Couldn’t get a response. ${(e as Error).message}` }]);
     } finally {
       setBusy(false);
     }
@@ -83,26 +83,26 @@ export default function VariablePicker() {
           <span />
         </div>
         <div className="wrap">
-          <p className="label">1단계</p>
-          <h1>변수 고르기</h1>
+          <p className="label">Step 1</p>
+          <h1>Pick indicators</h1>
           <p className="lead">
-            지표 {variables.length}개 중 최대 {BASKET_LIMIT}개. 핵심 지표 카드에 마우스를 올리면 정의와 의미가 뜹니다.
+            Choose up to {BASKET_LIMIT} of {variables.length} indicators. Hover over a core indicator card to see its definition and why it matters.
           </p>
         </div>
       </header>
 
-      {/* 고른 변수 바: Episode 의 Listen 바처럼 위에 붙어 따라옴 */}
+      {/* Selected-indicator bar: sticks to the top like the Episode Listen bar */}
       <div className="sticky-bar">
         <div className="wrap sticky-in">
           <span className="lbl num">
-            선택 {sel.basket.length}/{BASKET_LIMIT}
+            Selected {sel.basket.length}/{BASKET_LIMIT}
           </span>
           <div className="chips">
-            {sel.basket.length === 0 && <span className="muted">아직 없음</span>}
+            {sel.basket.length === 0 && <span className="muted">None yet</span>}
             {sel.basket.map((id) => (
               <span className="tab-chip" key={id}>
                 <span className="t">{variables.find((v) => v.id === id)?.name ?? id}</span>
-                <button className="x" onClick={() => removeVar(id)} aria-label="빼기">
+                <button className="x" onClick={() => removeVar(id)} aria-label="Remove">
                   <Icon name="close" size={14} />
                 </button>
               </span>
@@ -111,10 +111,10 @@ export default function VariablePicker() {
           {notice && <span className="warn-line">{notice}</span>}
           <span className="spacer" />
           <button className="btn secondary sm" aria-pressed={open} onClick={() => setOpen((o) => !o)}>
-            <Icon name="comment" size={16} /> 추천 AI
+            <Icon name="comment" size={16} /> AI recommender
           </button>
           <button className="btn primary sm" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
-            다음
+            Next
           </button>
         </div>
       </div>
@@ -123,12 +123,12 @@ export default function VariablePicker() {
         <section className="picker">
           <label className="input search">
             <Icon name="search" size={20} />
-            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름·키워드로 찾기 (예: 서리, 열대야, ETCCDI)" aria-label="지표 검색" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or keyword (e.g. frost, tropical nights, ETCCDI)" aria-label="Search indicators" />
           </label>
 
           {!term && (
             <Seg
-              label="지표 묶음"
+              label="Indicator family"
               options={families.map((f) => ({ id: f.id, label: `${f.name} ${famCount(f.id)}` }))}
               value={fam}
               onChange={(id) => {
@@ -139,8 +139,8 @@ export default function VariablePicker() {
             />
           )}
           <Seg
-            label="카테고리"
-            options={[{ id: "all", label: `전체 ${pool.length}` }, ...categories.map((c) => ({ id: c.id, label: `${c.name} ${pool.filter((v) => v.category === c.id).length}` })).filter((o) => !o.label.endsWith(" 0"))]}
+            label="Category"
+            options={[{ id: "all", label: `All ${pool.length}` }, ...categories.map((c) => ({ id: c.id, label: `${c.name} ${pool.filter((v) => v.category === c.id).length}` })).filter((o) => !o.label.endsWith(" 0"))]}
             value={cat}
             onChange={(id) => {
               setCat(id);
@@ -148,7 +148,7 @@ export default function VariablePicker() {
             }}
           />
 
-          {shown.length === 0 && <p className="empty">찾는 지표가 없습니다. 다른 낱말로 찾아보세요.</p>}
+          {shown.length === 0 && <p className="empty">No matching indicators. Try a different word.</p>}
           {asCards ? (
             <div className="var-grid">
               {shown.map((v) => (
@@ -171,7 +171,7 @@ export default function VariablePicker() {
                 </ul>
                 {shown.length > limit && (
                   <button className="btn secondary more" onClick={() => setLimit((l) => l + PAGE * 2)}>
-                    더 보기 ({shown.length - limit}개 남음)
+                    Show more ({shown.length - limit} left)
                   </button>
                 )}
               </>
@@ -181,12 +181,12 @@ export default function VariablePicker() {
 
         {open && (
           <ChatPanel
-            title="변수 추천 AI"
-            subtitle={health?.ai.enabled ? "질문에 맞는 변수 추천" : "AI 꺼짐, 키워드 검색"}
+            title="Indicator recommender AI"
+            subtitle={health?.ai.enabled ? "Suggests indicators for your question" : "AI off, keyword search"}
             onClose={() => setOpen(false)}
             onSend={send}
             busy={busy}
-            placeholder="예: 봄 서리 피해"
+            placeholder="e.g. Spring frost damage"
             scrollKey={msgs.length}
           >
             {msgs.map((m, i) => (
@@ -203,7 +203,7 @@ export default function VariablePicker() {
                 )}
                 {m.meta && (
                   <div className="src">
-                    <span className={`pill-sm ${m.meta.source === "llm" ? "" : "warn"}`}>{m.meta.source === "llm" ? "AI" : "규칙 기반"}</span>
+                    <span className={`pill-sm ${m.meta.source === "llm" ? "" : "warn"}`}>{m.meta.source === "llm" ? "AI" : "Rule-based"}</span>
                   </div>
                 )}
               </div>
