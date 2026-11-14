@@ -18,6 +18,8 @@ interface Props {
   onClose: () => void;
 }
 
+const EXAMPLES = ["2020년 하나 때문에 나온 결과야?", "신뢰구간이 무슨 뜻이야?", "우리 밭에도 해당될까?", "다른 산지랑 비교하면 어때?"];
+
 const CELLS: { key: keyof InsightCard; title: string }[] = [
   { key: "summary", title: "한 줄 요약" },
   { key: "numbers", title: "숫자로 보면" },
@@ -90,7 +92,8 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
       placeholder="예: 2020년 하나 때문에 나온 결과야?"
       scrollKey={items.length}
       footer={
-        <div style={{ padding: "10px 12px 0", display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid var(--line)" }}>
+        (vars.length > 1 || items.length > 0) && (
+        <div className="chat-tools">
           {vars.length > 1 && (
             <select className="chip-select" value={activeVar} onChange={(e) => setVarId(e.target.value)} aria-label="인사이트 대상 변수">
               {vars.map((v) => (
@@ -100,15 +103,32 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
               ))}
             </select>
           )}
-          <button className="btn btn-primary btn-sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
-            ✦ 인사이트 줘
-          </button>
+          {items.length > 0 && (
+            <button className="btn btn-primary btn-sm" onClick={() => requestCard(decision)} disabled={busy} style={{ marginLeft: "auto" }}>
+              ✦ 인사이트 줘
+            </button>
+          )}
         </div>
+        )
       }
     >
-      {items.length === 0 && (
-        <div className="msg assistant">
-          [인사이트 줘]를 누르면 지금 그래프와 판정을 생산자 관점에서 풀어 드려요. 숫자는 통계 엔진이 계산한 값만 씁니다. 궁금한 점을 바로 물어보셔도 돼요.
+      {items.length === 0 && !busy && (
+        <div className="ai-empty">
+          <p className="muted small">
+            지금 그래프와 판정을 생산자 관점에서 풀어 드려요.
+            <br />
+            숫자는 통계 엔진이 계산한 값만 씁니다.
+          </p>
+          <button className="btn btn-primary" onClick={() => requestCard(decision)}>
+            ✦ 인사이트 줘
+          </button>
+          <div className="chat-suggest">
+            {EXAMPLES.map((q) => (
+              <button key={q} className="chip" onClick={() => ask(q)}>
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {items.map((it, i) => {
@@ -121,7 +141,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
               {!it.answered && (
                 <div className="decision-grid" style={{ marginTop: 10 }}>
                   {it.options.map((o) => (
-                    <button key={o.id} className="btn btn-ghost btn-sm" onClick={() => choose(i, o)}>
+                    <button key={o.id} className="chip" onClick={() => choose(i, o)}>
                       {o.label}
                     </button>
                   ))}

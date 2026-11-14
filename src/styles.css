@@ -241,7 +241,7 @@ details summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 
 /* 지도 마커 */
 /* 지도 공통: Leaflet 요소가 sticky 헤더 위로 못 올라오게 컨테이너에서 쌓임 맥락을 닫음 */
-.map-box, .analysis-map { isolation: isolate; }
+.map-box { isolation: isolate; }
 .leaflet-container { background: var(--bg); font-family: inherit; }
 .leaflet-bar { border: 1px solid var(--glass-line) !important; border-radius: 10px !important; overflow: hidden; box-shadow: inset 0 1px 0 var(--glass-hi), 0 10px 30px rgb(0 0 0 / var(--shadow-a)) !important; }
 .leaflet-bar a, .leaflet-bar a:hover { background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--fg); border-bottom-color: var(--line); }
@@ -272,31 +272,85 @@ details summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .map-legend { position: absolute; left: 12px; bottom: 12px; z-index: 500; border-radius: 12px; padding: 8px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 
-/* ---------- 분석 ---------- */
-.summary-bar { padding: 10px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-.summary-bar .grp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.summary-bar .sep { width: 1px; height: 20px; background: var(--line); }
+/* ---------- 분석: 지도가 무대, 오른쪽에 결과 패널, 지도 위에 떠 있는 요약·AI ---------- */
+.an { --panel-w: clamp(360px, 32vw, 480px); position: relative; height: calc(100dvh - var(--header-h)); overflow: hidden; }
+.an-stage { position: absolute; inset: 0; }
+.an-map { position: absolute; inset: 0; isolation: isolate; }
+.an-map .leaflet-container { height: 100%; width: 100%; }
+@media (min-width: 861px) {
+  /* 지도 컨트롤은 패널에 가리지 않는 쪽으로 */
+  .an .leaflet-left { left: auto; right: calc(var(--panel-w) + 22px); }
+  .an .leaflet-bottom.leaflet-right { right: calc(var(--panel-w) + 32px); }
+  .an .map-legend { left: auto; right: calc(var(--panel-w) + 32px); bottom: 34px; }
+}
+.an-summary { position: absolute; z-index: 2; left: 16px; top: 16px; max-width: calc(100% - var(--panel-w) - 110px); border-radius: 16px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.an-summary .grp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.an-summary .sep { width: 1px; height: 18px; background: var(--line); }
+.an-summary .demo-flag { align-self: center; }
 .chip-select { border-radius: 999px !important; padding: 3px 10px !important; font-size: 13px; cursor: pointer; }
 .chip-add { border: 1px dashed var(--faint) !important; background: transparent !important; border-radius: 999px !important; padding: 3px 10px !important; font-size: 13px; cursor: pointer; color: var(--muted); }
-.analysis-top { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; margin-bottom: 16px; }
-.analysis-map { height: 300px; padding: 0; overflow: hidden; position: relative; }
-.analysis-map .leaflet-container { height: 100%; width: 100%; }
-.result-block { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; margin-bottom: 18px; }
-.chart-card { padding: 18px 18px 8px; }
-.chart-card h3 { font-size: 16px; }
-.chart-card .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.chart-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+
+/* 오른쪽 패널: 가장 큰 유리면이라 가장 두꺼운 재질(진한 바탕, 강한 블러, 깊은 그림자). 안에는 또 다른 반투명 층을 두지 않음 */
+.an-side { position: absolute; z-index: 3; top: 16px; right: 16px; bottom: 16px; width: var(--panel-w); display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: 24px;
+  background: rgb(var(--bg-rgb) / .66); -webkit-backdrop-filter: blur(32px) saturate(1.5); backdrop-filter: blur(32px) saturate(1.5);
+  border: 1px solid var(--glass-line); box-shadow: inset 0 1px 0 var(--glass-hi), 0 24px 64px rgb(0 0 0 / var(--shadow-a)), 0 2px 8px rgb(0 0 0 / var(--shadow-a));
+  --muted: rgb(var(--fg-rgb) / .7); --faint: rgb(var(--fg-rgb) / .45); --line: rgb(var(--fg-rgb) / .1); }
+@media (prefers-reduced-transparency: reduce) { .an-side { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.side-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 20px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px); mask-image: linear-gradient(to bottom, transparent 0, #000 18px); }
+.side-head { display: flex; flex-direction: column; gap: 4px; }
+.side-head h2 { font-size: 32px; font-weight: 800; line-height: 1.15; letter-spacing: -.04em; }
+.side-sec { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.sec-head { display: flex; flex-direction: column; gap: 2px; }
+.sec-head h3 { font-size: 15px; font-weight: 700; }
+.var-seg { border: 1px solid var(--line); flex-wrap: wrap; align-self: flex-start; }
+.sources { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--faint); display: flex; flex-direction: column; gap: 6px; }
+.chart-legend { display: flex; gap: 6px 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
 .chart-legend i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 3px; }
-.verdict { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+/* 판정 */
+.verdict { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
 .verdict .where { font-size: 12px; color: var(--muted); }
-.verdict .v-label { font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
-.verdict .rate { font-size: 15px; font-weight: 600; }
+.verdict .v-label { font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+.stat-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.stat-big { font-size: 40px; font-weight: 800; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
 .verdict dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin: 0; }
 .verdict dt { color: var(--muted); }
 .verdict dd { margin: 0; }
 .threshold-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
-.upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; padding: 12px 16px; margin-bottom: 16px; }
-.upload-row input[type="text"] { width: 140px; }
+
+/* 내 기록 겹치기 */
+.field-inline { display: flex; align-items: center; gap: 8px; }
+.field-inline input { flex: 1; max-width: 220px; }
+.drop { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px dashed var(--faint); border-radius: 12px; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.drop[data-over] { border-style: solid; border-color: var(--fg); background: var(--hover); }
+.drop:focus-within { outline: 2px solid var(--fg); outline-offset: 2px; }
+.drop-name { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) { .drop:hover { border-color: var(--fg); } }
+
+/* 인사이트 AI: 왼쪽 아래 버튼에서 피어나는 유리 패널. 닫아도 대화는 유지(숨기기만) */
+.ai-toggle { position: absolute; z-index: 4; left: 16px; bottom: 16px; height: 40px; padding: 0 16px; border-radius: 999px; font-weight: 600; cursor: pointer; color: var(--fg); display: inline-flex; align-items: center; gap: 8px; transition: transform 100ms var(--ease-out), opacity 150ms ease; }
+.ai-toggle:active { transform: scale(0.97); }
+.ai-toggle[aria-expanded="true"] { opacity: 0; pointer-events: none; }
+.ai-float { position: absolute; z-index: 5; left: 16px; bottom: 16px; width: min(400px, calc(100% - var(--panel-w) - 64px)); height: min(580px, calc(100% - 110px)); transform-origin: bottom left;
+  opacity: 0; transform: scale(0.96) translateY(6px); filter: blur(6px); visibility: hidden; pointer-events: none;
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out), filter 150ms var(--ease-out), visibility 0s linear 150ms; }
+.ai-float[data-open] { opacity: 1; transform: none; filter: none; visibility: visible; pointer-events: auto; transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out), filter 220ms var(--ease-out), visibility 0s; }
+.ai-float .chat { position: static; width: auto; height: 100%; }
+.ai-empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; max-width: 320px; }
+.ai-empty .chat-suggest { justify-content: center; }
+.chat-tools { padding: 10px 12px 0; display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .ai-float, .ai-float[data-open] { transform: none; filter: none; } }
+
+@media (max-width: 860px) {
+  .an { height: auto; overflow: visible; }
+  .an-stage { position: relative; height: 62vh; min-height: 420px; }
+  .an-summary { max-width: calc(100% - 32px); }
+  .an-side { position: static; width: auto; margin: 12px; border-radius: 20px; }
+  .side-scroll { overflow: visible; -webkit-mask-image: none; mask-image: none; padding: 18px; }
+  .ai-toggle { position: fixed; z-index: 1100; }
+  .ai-float { position: fixed; z-index: 1100; left: 12px; right: 12px; bottom: 12px; width: auto; height: 72vh; }
+}
 
 /* 인사이트 카드 */
 .decision-grid { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -312,7 +366,7 @@ details summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 @media (max-width: 1100px) {
   .with-panel.open { grid-template-columns: minmax(0, 1fr); }
   .chat { position: fixed; right: 12px; bottom: 12px; top: auto; width: min(400px, calc(100vw - 24px)); height: 70vh; z-index: 1100; }
-  .result-block, .analysis-top, .region-layout { grid-template-columns: minmax(0, 1fr); }
+  .region-layout { grid-template-columns: minmax(0, 1fr); }
   .hero { grid-template-columns: 1fr; padding-top: 40px; }
   .demo-grid, .how { grid-template-columns: 1fr; }
 }

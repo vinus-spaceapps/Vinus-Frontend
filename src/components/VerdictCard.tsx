@@ -1,4 +1,4 @@
-import { pText, signed, trendTone } from "../lib/format";
+import { pText, signed } from "../lib/format";
 import type { Region, VariableResult } from "../lib/types";
 
 interface Props {
@@ -18,14 +18,15 @@ function detectText(r: VariableResult): string | null {
 // 판정 카드: 엔진 숫자를 쉬운 말로.
 export default function VerdictCard({ r, region, onThreshold }: Props) {
   const st = r.stats;
-  const tone = trendTone(st.verdict.status, st.verdict.direction);
+  // 상태는 색이 아니라 배지 모양으로: 유의 = 흰 채움, 엇갈림 = 점선, 유의하지 않음 = 얇은 선
+  const badge = st.verdict.status === "significant" ? "sig" : st.verdict.status === "mixed" ? "warn" : "";
   const unit = r.variable.unit;
   const [lo, hi] = st.ci_per_decade;
   const det = detectText(r);
   const v = r.variable;
 
   return (
-    <div className={`card verdict ${tone}`}>
+    <section className="verdict">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <span className="where">
           {region.name} · {v.name} · {r.start}~{r.end}
@@ -34,15 +35,16 @@ export default function VerdictCard({ r, region, onThreshold }: Props) {
           {r.is_mock ? "예시 데이터" : "NASA 집계"}
         </span>
       </div>
-      <div className="v-label">{st.verdict.label}</div>
-      <div className="rate">
-        10년에 {signed(st.slope_per_decade)}
-        {unit}
-        <span className="muted small" style={{ fontWeight: 500 }}>
-          {" "}
-          (95% 신뢰구간 {signed(lo)} ~ {signed(hi)})
-        </span>
+      <h3 className="v-label">{st.verdict.label}</h3>
+      <div className="stat-head">
+        <span className="stat-big">{signed(st.slope_per_decade)}</span>
+        <span className="muted">{unit} / 10년</span>
+        <span className={`badge ${badge}`}>Mann-Kendall {pText(st.mk.p)}</span>
       </div>
+      <p className="muted small">
+        95% 신뢰구간 {signed(lo)} ~ {signed(hi)}
+        {unit}
+      </p>
       <dl>
         <dt>기울기 방법</dt>
         <dd>{st.method === "sen" ? "Sen (튀는 해에 덜 흔들림)" : "OLS 최소제곱"}</dd>
@@ -98,6 +100,6 @@ export default function VerdictCard({ r, region, onThreshold }: Props) {
           · {n}
         </p>
       ))}
-    </div>
+    </section>
   );
 }

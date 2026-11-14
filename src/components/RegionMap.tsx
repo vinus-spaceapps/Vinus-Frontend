@@ -11,6 +11,7 @@ interface Props {
   onSelect?: (id: string) => void;
   comparison?: RegionComparison[]; // 있으면 추세 방향 색으로 칠함
   unit?: string;
+  padRight?: number; // 오른쪽을 덮는 패널 폭: 선택 산지를 보이는 영역 가운데로
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -29,11 +30,16 @@ function orbitIcon(color: string, sel: boolean, name: string, sub: string | null
   });
 }
 
-function FlyTo({ region }: { region?: Region }) {
+function FlyTo({ region, padRight }: { region?: Region; padRight: number }) {
   const map = useMap();
   useEffect(() => {
-    if (region) map.flyTo([region.lat, region.lon], Math.max(map.getZoom(), 4), { duration: 0.8 });
-  }, [region, map]);
+    if (!region) return;
+    const z = Math.max(map.getZoom(), 4);
+    const center = map.unproject(map.project([region.lat, region.lon], z).add([padRight / 2, 0]), z);
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) map.setView(center, z, { animate: false });
+    else map.flyTo(center, z, { duration: 0.8 });
+  }, [region, map, padRight]);
   return null;
 }
 
@@ -46,7 +52,7 @@ function WheelOnClick() {
   return null;
 }
 
-export default function RegionMap({ regions, selected, onSelect, comparison, unit }: Props) {
+export default function RegionMap({ regions, selected, onSelect, comparison, unit, padRight = 0 }: Props) {
   const sel = regions.find((r) => r.id === selected);
   const theme = useTheme();
   // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼워 위성 등장 효과가 반복되므로 고정
@@ -74,7 +80,7 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
-        <FlyTo region={sel} />
+        <FlyTo region={sel} padRight={padRight} />
         <WheelOnClick />
         {regions.map((r) => (
           <Marker
