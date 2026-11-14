@@ -164,8 +164,9 @@ input.input { display: block; width: 100%; outline: none; }
 /* 기후 줄무늬: 한 줄 = 한 해, 밝을수록 값이 큰 해 (실제 값) */
 .stripes { display: flex; }
 .stripes i { flex: 1; background: var(--rose); }
-.hero-stripes { position: absolute; z-index: -1; inset: 0; -webkit-mask-image: radial-gradient(ellipse 70% 62% at 50% 55%, #000 0%, rgb(0 0 0 / 0.55) 45%, transparent 78%); mask-image: radial-gradient(ellipse 70% 62% at 50% 55%, #000 0%, rgb(0 0 0 / 0.55) 45%, transparent 78%); }
-.hero::after { content: ""; position: absolute; z-index: -1; inset: 0; background: radial-gradient(ellipse 34% 30% at 50% 46%, rgb(18 18 18 / 0.78), transparent 100%); }
+/* 줄무늬는 아래에서 지평선처럼 올라오고 위·양옆으로 사라짐. 글자는 그 위 어두운 칸에 */
+.hero-stripes { position: absolute; z-index: -1; inset: auto 0 0; height: 64%; -webkit-mask-image: linear-gradient(to top, transparent 0%, #000 16%, rgb(0 0 0 / 0.6) 50%, transparent 100%), linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); -webkit-mask-composite: source-in; mask-image: linear-gradient(to top, transparent 0%, #000 16%, rgb(0 0 0 / 0.6) 50%, transparent 100%), linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-composite: intersect; }
+.hero::after { content: ""; position: absolute; z-index: -1; inset: 0; background: radial-gradient(ellipse 55% 38% at 50% 100%, rgb(243 153 179 / 0.16), transparent 70%); pointer-events: none; }
 .hero .stripes-note, .ep-hero .stripes-note { position: absolute; right: var(--gutter); bottom: 22px; max-width: 40ch; text-align: right; font-size: 12px; letter-spacing: 0; color: rgb(255 255 255 / 0.5); }
 .hero-copy { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; max-width: 720px; animation: rise 1s var(--ease-out) backwards; }
 .hero-mark { width: 150px; height: auto; opacity: 0.9; }
