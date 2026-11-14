@@ -54,3 +54,22 @@ src/
 - 차트: Recharts, 지도: Leaflet + Esri 다크 그레이 베이스맵(키 불필요)
 - 결과는 실제 자료(2001–2026)입니다. 연기 지표 2개(AIRS·OMI)만 아직 예시 값이라 화면에 "예시 데이터"가 붙습니다.
 - 움직임 줄이기·투명 줄이기·대비 높이기 설정과 터치(누를 곳 44px)를 따릅니다.
+
+## 실서버 (Railway)
+
+| 항목 | 값 |
+|---|---|
+| 주소 | https://vinus-frontend-production.up.railway.app |
+| Railway | 프로젝트 `vinus`, 서비스 `vinus-frontend` (백엔드는 같은 프로젝트의 `vinus-backend`) |
+| 빌드 | `npm run build` (Railway 가 자동 실행) |
+| 실행 | `npm start` → `serve -s dist` (모든 경로를 index.html 로, `/analyze?...` 링크도 바로 열림) |
+| 설정값 | `VITE_API_URL=https://vinus-backend-production.up.railway.app` (빌드할 때 들어감) |
+
+GitHub 와 연결하지 않고 로컬 폴더에서 바로 올립니다. push 해도 자동으로 다시 배포되지 않으니, `main` 을 받은 뒤 이 폴더에서 다시 올리세요.
+
+```bash
+railway link --project vinus   # 처음 한 번, 서비스는 vinus-frontend
+railway up --service vinus-frontend
+```
+
+백엔드 주소를 바꾸면 백엔드 `VINUS_CORS_ORIGINS` 에 프론트 주소가 들어 있는지 확인하세요.
