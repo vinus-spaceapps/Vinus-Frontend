@@ -6,10 +6,10 @@ import TrendChart from "../components/TrendChart";
 import VerdictCard from "../components/VerdictCard";
 import { api } from "../lib/api";
 import { useCatalog } from "../lib/catalog";
-import { BASKET_LIMIT, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
+import { BASKET_LIMIT, DATA_START, DEFAULT_END, fromSearch, toSearch, useSelection, type AnalyzeParams } from "../lib/selection";
 import type { AnalysisResponse, AnalyzeQuery, NextStepChange, YearValue } from "../lib/types";
 
-const YEARS = Array.from({ length: 2025 - 1981 + 1 }, (_, i) => 1981 + i);
+const YEARS = Array.from({ length: DEFAULT_END - DATA_START + 1 }, (_, i) => DATA_START + i);
 
 function parseCsv(text: string): YearValue[] {
   const out: YearValue[] = [];
@@ -108,13 +108,13 @@ export default function Analysis() {
     else if (change.type === "region") update({ region: change.value });
     else if (change.type === "start_year") update({ start: change.value });
     else if (change.type === "add_variable") {
-      if (params.variables.includes(change.value)) return setNotice("이미 분석 중인 변수예요. 오른쪽 패널에서 변수를 바꿔 보세요.");
+      if (params.variables.includes(change.value)) return setNotice("이미 분석 중인 변수입니다.");
       if (params.variables.length < BASKET_LIMIT) update({ variables: [...params.variables, change.value] });
       else {
         // 가득 차면 지금 인사이트를 보는 변수는 남기고 다른 하나를 바꿔 넣습니다.
         const drop = params.variables.find((x) => x !== varId);
         update({ variables: [...params.variables.filter((v) => v !== drop), change.value] });
-        setNotice("바구니가 가득 차서 변수 하나를 바꿔 넣었어요.");
+        setNotice(`변수는 최대 ${BASKET_LIMIT}개라 하나를 교체했습니다.`);
       }
     }
   };
@@ -127,7 +127,7 @@ export default function Analysis() {
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     const pts = parseCsv(await f.text());
-    if (pts.length < 4) setNotice("CSV에서 (연도, 값) 4줄 이상을 찾지 못했어요. 예: 2015,3.2");
+    if (pts.length < 4) setNotice("연도,값 형식의 행이 4개 이상 필요합니다. 예: 2015,3.2");
     else {
       setUserSeries(pts);
       setFileName(f.name);
@@ -195,7 +195,7 @@ export default function Analysis() {
             </select>
           </div>
           {loading && <span className="spinner" aria-label="계산 중" />}
-          {data?.is_mock && <span className="demo-flag" title="실제 관측값이 아니라 화면 확인용 예시 데이터예요">예시 데이터</span>}
+          {data?.is_mock && <span className="demo-flag" title="실제 관측값이 아닌 예시 데이터">예시 데이터</span>}
         </div>
 
         {query && data && (
@@ -273,7 +273,7 @@ export default function Analysis() {
                     내 기록 겹치기 <span className="muted small">(선택)</span>
                   </h3>
                 </div>
-                <p className="muted small">연도,값 형식 CSV를 올리면 그래프 오른쪽 축에 겹쳐 그려요. 예: 수확량, 서리 피해율. 상관은 인과가 아닙니다.</p>
+                <p className="muted small">연도,값 형식 CSV (예: 수확량, 서리 피해율). 그래프 오른쪽 축에 표시. 상관관계는 인과관계가 아님.</p>
                 <label className="field-inline">
                   <span className="muted small">이름</span>
                   <input type="text" value={userLabel} onChange={(e) => setUserLabel(e.target.value)} />
@@ -304,7 +304,7 @@ export default function Analysis() {
                   <span className="btn btn-ghost btn-sm" aria-hidden>
                     파일 선택
                   </span>
-                  <span className={`drop-name ${fileName ? "" : "muted"}`}>{fileName ?? "또는 CSV 파일을 여기로 끌어 놓기"}</span>
+                  <span className={`drop-name ${fileName ? "" : "muted"}`}>{fileName ?? "또는 파일을 여기에 끌어 놓기"}</span>
                 </label>
                 {userSeries && (
                   <button
@@ -321,8 +321,8 @@ export default function Analysis() {
               </section>
 
               <footer className="sources">
-                <p>지도는 같은 변수·기간으로 다른 산지도 계산해 추세 방향을 색으로 보여 줘요. 마커를 누르면 그 산지로 바뀝니다.</p>
-                {q !== undefined && <p>산지 7곳을 함께 비교하므로 다중검정 보정(FDR) q값도 계산했어요: 이 산지 q = {q.toFixed(3)}</p>}
+                <p>지도 색: 같은 변수·기간의 산지별 추세 방향. 마커를 누르면 해당 산지로 전환.</p>
+                {q !== undefined && <p>다중검정 보정(FDR) q = {q.toFixed(3)} (산지 {shown.regions.length}곳 비교)</p>}
                 <p>{data.resolution_note}</p>
               </footer>
             </>

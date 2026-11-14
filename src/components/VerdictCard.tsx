@@ -58,20 +58,20 @@ export default function VerdictCard({ r, onThreshold }: Props) {
           {unit} ({st.early.from}~{st.early.to} vs {st.late.from}~{st.late.to})
         </dd>
       </dl>
-      <p className="muted small">p값은 추세가 없을 때 이만한 변화가 우연히 나올 확률입니다.</p>
+      <p className="muted small">p값: 추세가 없다고 가정할 때 이 정도 변화가 우연히 나올 확률</p>
 
       {det && <div className="flag info">{det}</div>}
-      {st.flags.includes("tests_disagree") && <div className="flag">t-검정과 Mann-Kendall 결과가 엇갈립니다. 몇몇 해의 큰 값이 기울기를 끌어올렸을 수 있어요.</div>}
+      {st.flags.includes("tests_disagree") && <div className="flag">t-검정과 Mann-Kendall 결과 불일치. 일부 연도의 큰 값이 기울기에 영향을 줬을 수 있음.</div>}
       {st.flags.includes("one_year_drives_result") && (
         <div className="flag">
-          가장 튄 {st.leave_out.year}년을 빼면 판정이 '{st.leave_out.verdict.label}'(으)로 바뀝니다. 한 해가 결과를 좌우하고 있어요.
+          최대 이상치 {st.leave_out.year}년 제외 시 판정: '{st.leave_out.verdict.label}'. 한 해가 결과를 좌우함.
         </div>
       )}
       {!st.flags.includes("one_year_drives_result") && st.verdict.status === "significant" && (
-        <div className="flag info">가장 튄 {st.leave_out.year}년을 빼도 판정은 그대로예요.</div>
+        <div className="flag info">최대 이상치 {st.leave_out.year}년 제외 시에도 판정 동일.</div>
       )}
       {st.flags.includes("autocorrelation_weakens") && (
-        <div className="flag">해마다 값이 이어지는 경향(자기상관)을 보정하면 t-검정 {pText(st.ols.p_ar1)}로 유의성이 약해집니다.</div>
+        <div className="flag">자기상관 보정 시 t-검정 {pText(st.ols.p_ar1)} (유의성 약해짐).</div>
       )}
 
       {v.threshold_options.length > 1 && (

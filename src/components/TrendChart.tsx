@@ -102,7 +102,7 @@ export default function TrendChart({ r }: Props) {
         </span>
         <span>
           <i className="lg-ring" />
-          가장 튄 해 ({lo})
+          최대 이상치 ({lo})
         </span>
         {r.overlay && (
           <span>

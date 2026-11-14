@@ -12,11 +12,11 @@ interface UiMsg extends ChatMsg {
   meta?: Pick<VariableChatResponse, "add" | "source">;
 }
 
-const SUGGESTIONS = ["봄마다 서리 때문에 걱정이야", "수확기에 산불 연기가 걱정돼", "적산온도가 뭐야?", "지금 품종이 계속 맞을까?"];
+const SUGGESTIONS = ["봄 서리 피해", "수확기 산불 연기", "적산온도란?", "품종 적합성"];
 
 const WELCOME: UiMsg = {
   role: "assistant",
-  content: "무엇이 걱정되세요? 말씀해 주시면 관련 변수를 골라 바구니에 담아 드릴게요. 변수 뜻을 물어보셔도 됩니다.",
+  content: "걱정되는 기후 문제를 입력하면 관련 변수를 추천합니다. 변수 뜻도 물어볼 수 있습니다.",
 };
 
 export default function VariablePicker() {
@@ -34,7 +34,7 @@ export default function VariablePicker() {
 
   const toggle = (id: string) => {
     if (sel.basket.includes(id)) return removeVar(id);
-    if (!addVar(id)) setNotice(`바구니는 최대 ${BASKET_LIMIT}개까지 담을 수 있어요. 그래프 비교가 읽히는 수준이에요.`);
+    if (!addVar(id)) setNotice(`최대 ${BASKET_LIMIT}개까지 선택할 수 있습니다.`);
     else setNotice(null);
   };
 
@@ -55,7 +55,7 @@ export default function VariablePicker() {
       });
       setMsgs([...next, { role: "assistant", content: res.reply, meta: { add: added, source: res.source } }]);
     } catch (e) {
-      setMsgs([...next, { role: "assistant", content: `답변을 가져오지 못했어요. ${(e as Error).message}` }]);
+      setMsgs([...next, { role: "assistant", content: `응답을 받을 수 없습니다. ${(e as Error).message}` }]);
     } finally {
       setBusy(false);
     }
@@ -67,8 +67,8 @@ export default function VariablePicker() {
         <section>
           <div className="page-title">
             <div>
-              <h1>분석할 변수 고르기</h1>
-              <p>카드를 누르면 바구니에 담겨요. 마우스를 올리면 쉬운 설명이 나옵니다. 최대 {BASKET_LIMIT}개.</p>
+              <h1>변수 선택</h1>
+              <p>최대 {BASKET_LIMIT}개. 카드에 마우스를 올리면 설명 표시.</p>
             </div>
           </div>
 
@@ -91,10 +91,10 @@ export default function VariablePicker() {
 
           <div className="glass basket">
             <span className="lbl">
-              분석 바구니 {sel.basket.length}/{BASKET_LIMIT}
+              선택한 변수 {sel.basket.length}/{BASKET_LIMIT}
             </span>
             <div className="chips">
-              {sel.basket.length === 0 && <span className="muted small">아직 비어 있어요. 카드를 누르거나 AI에게 걱정을 말해 보세요.</span>}
+              {sel.basket.length === 0 && <span className="muted small">없음</span>}
               {sel.basket.map((id) => (
                 <span className="chip tag" key={id}>
                   {variables.find((v) => v.id === id)?.name ?? id}
@@ -107,19 +107,19 @@ export default function VariablePicker() {
             {notice && <span className="warn-line">{notice}</span>}
             <span className="spacer" />
             <button className="btn btn-primary" disabled={sel.basket.length === 0} onClick={() => nav("/region")}>
-              지역 설정으로
+              다음
             </button>
           </div>
         </section>
 
         {open && (
           <ChatPanel
-            title="변수 담기 AI"
-            subtitle={health?.ai.enabled ? "걱정을 말하면 맞는 변수를 담아 드려요" : "AI 꺼짐, 키워드로 찾아 드려요"}
+            title="변수 추천 AI"
+            subtitle={health?.ai.enabled ? "질문에 맞는 변수 추천" : "AI 꺼짐, 키워드 검색"}
             onClose={() => setOpen(false)}
             onSend={send}
             busy={busy}
-            placeholder="예: 봄마다 서리 때문에 걱정이야"
+            placeholder="예: 봄 서리 피해"
             scrollKey={msgs.length}
           >
             {msgs.map((m, i) => (
@@ -155,7 +155,7 @@ export default function VariablePicker() {
       </div>
       {!open && (
         <button className="glass panel-toggle" onClick={() => setOpen(true)}>
-          ✦ 변수 담기 AI
+          ✦ 변수 추천 AI
         </button>
       )}
     </main>

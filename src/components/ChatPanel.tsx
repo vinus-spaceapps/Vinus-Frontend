@@ -58,7 +58,7 @@ export default function ChatPanel({ title, subtitle, onClose, children, onSend, 
       >
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder ?? "메시지를 입력하세요"} disabled={busy} />
         <button className="btn btn-primary btn-sm" type="submit" disabled={busy || !text.trim()}>
-          보내기
+          전송
         </button>
       </form>
     </aside>

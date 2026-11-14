@@ -6,19 +6,19 @@ const DEMOS = [
   {
     where: "미국 오리건 로그 밸리",
     q: "수확기 연기가 늘고 있나?",
-    who: "와이너리에 포도를 파는 계약 재배자",
+    who: "포도 계약 재배자",
     params: { variables: ["harvest_smoke_days", "harvest_aerosol_days"], region: "rogue_valley", start: 2003, end: 2025, thresholds: {} },
   },
   {
     where: "프랑스 부르고뉴",
     q: "싹튼 뒤 서리는 줄었나?",
-    who: "서리 대비 시설 투자를 고민하는 재배자",
+    who: "서리 대비 시설 투자 검토",
     params: { variables: ["frost_after_budburst"], region: "burgundy", start: 2003, end: 2025, thresholds: {} },
   },
   {
     where: "충북 영동",
     q: "수확기 비가 잦아졌나?",
-    who: "수확 일정을 짜는 국내 생산자",
+    who: "국내 생산자 수확 일정",
     params: { variables: ["harvest_rain_days"], region: "yeongdong", start: 2003, end: 2025, thresholds: {} },
   },
 ];
@@ -49,7 +49,7 @@ function HeroVisual() {
           ),
         )}
       </svg>
-      <span className="hv-label">로그 밸리의 수확기 연기 노출일수</span>
+      <span className="hv-label">로그 밸리 수확기 연기 노출일수</span>
       <span className="hv-value">
         10년에 +4일 <span className="badge sig">유의함</span> <span className="demo-flag">예시</span>
       </span>
@@ -74,20 +74,17 @@ export default function Landing() {
             <h1>
               우리 산지의 기후 변화,
               <br />
-              체감이 아니라 NASA 데이터로
-              <br />
-              확인하세요
+              체감 말고 NASA 데이터로
             </h1>
             <p className="lead">
-              서리·폭염·수확기 비·산불 연기가 정말 늘고 있는지, 위성과 기후 모델 자료로 해마다 숫자를 뽑아 추세가 우연이 아닌지 통계로
-              판정해 드립니다.
+              NASA 위성·재분석 자료로 산지별 서리, 폭염, 수확기 강수, 산불 연기의 연도별 추세와 통계적 유의성을 계산합니다.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button className="btn btn-primary btn-lg" onClick={() => nav("/variables")}>
-                내 산지 확인하기
+                시작하기
               </button>
               <button className="btn btn-ghost btn-lg" onClick={() => openDemo(DEMOS[0])}>
-                예시 결과 보기
+                예시 보기
               </button>
             </div>
           </div>
@@ -97,22 +94,22 @@ export default function Landing() {
         <section className="how" aria-label="이용 순서">
           <div className="how-step">
             <div className="n">1</div>
-            <h3>변수 고르기</h3>
-            <p className="muted small">걱정되는 것을 고르거나 AI에게 말하면 맞는 지표를 담아 줍니다. 카드에 마우스를 올리면 쉬운 설명이 나와요.</p>
+            <h3>변수 선택</h3>
+            <p className="muted small">서리, 폭염, 강수 등 지표 최대 3개. AI 추천 지원.</p>
           </div>
           <div className="how-step">
             <div className="n">2</div>
-            <h3>지역 설정</h3>
-            <p className="muted small">지도에서 산지를 고르고 기간을 정합니다. 우리 밭의 발아·수확 날짜를 넣을 수도 있어요.</p>
+            <h3>지역·기간 설정</h3>
+            <p className="muted small">산지와 분석 기간(2001년~) 선택. 밭의 발아·수확 날짜 입력 가능.</p>
           </div>
           <div className="how-step">
             <div className="n">3</div>
             <h3>추세 판정</h3>
-            <p className="muted small">연도별 그래프와 함께 10년당 변화량, 신뢰구간, 유의성(t-검정·Mann-Kendall)을 쉬운 말로 보여 줍니다.</p>
+            <p className="muted small">연도별 그래프, 10년당 변화량, 95% 신뢰구간, t-검정·Mann-Kendall 유의성.</p>
           </div>
         </section>
 
-        <h2 className="section-h">시연 예시</h2>
+        <h2 className="section-h">예시</h2>
         <section className="demo-grid">
           {DEMOS.map((d) => (
             <button key={d.where} className="glass demo-card" onClick={() => openDemo(d)}>
@@ -132,7 +129,7 @@ export default function Landing() {
             ))}
           </div>
           <div>NASA Space Apps Challenge 2026 서울, Be An Earth System Trend Detective 과제. 팀 율촌</div>
-          <div style={{ marginTop: 4 }}>현재 분석 결과는 예시 데이터(목업)이며, 실제 NASA 집계값으로 교체될 예정입니다.</div>
+          <div style={{ marginTop: 4 }}>현재 분석 결과는 예시 데이터(목업)입니다.</div>
         </div>
       </footer>
     </>

@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { StageKey } from "./types";
 
 export const BASKET_LIMIT = 3;
+// 실제 집계 자료(NASA_와인_데이터정리.xlsx)가 2001년부터라 그 앞 연도는 고를 수 없게 함
+export const DATA_START = 2001;
 export const DEFAULT_START = 2003;
 export const DEFAULT_END = 2025;
 
@@ -99,7 +101,7 @@ export function fromSearch(search: string): AnalyzeParams | null {
   return {
     variables,
     region,
-    start: Number(q.get("s")) || DEFAULT_START,
+    start: Math.max(Number(q.get("s")) || DEFAULT_START, DATA_START),
     end: Number(q.get("e")) || DEFAULT_END,
     thresholds,
   };

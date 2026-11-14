@@ -3,10 +3,10 @@ import { Navigate, useNavigate } from "react-router-dom";
 import RegionMap from "../components/RegionMap";
 import { useCatalog } from "../lib/catalog";
 import { STAGE_LABEL } from "../lib/format";
-import { DEFAULT_END, toSearch, useSelection } from "../lib/selection";
+import { DATA_START, DEFAULT_END, toSearch, useSelection } from "../lib/selection";
 import type { StageKey } from "../lib/types";
 
-const MIN_YEAR = 1981;
+const MIN_YEAR = DATA_START;
 const MAX_YEAR = DEFAULT_END;
 const STAGES: StageKey[] = ["budburst", "flowering", "veraison", "harvest"];
 
@@ -37,11 +37,11 @@ export default function RegionSetup() {
     <main className="container page">
       <div className="page-title">
         <div>
-          <h1>지역과 기간 정하기</h1>
-          <p>지도에서 와인 산지를 누르거나 검색하세요. 분석할 변수: {picked.map((v) => v!.name).join(", ")}</p>
+          <h1>지역·기간 설정</h1>
+          <p>선택한 변수: {picked.map((v) => v!.name).join(", ")}</p>
         </div>
         <button className="btn btn-ghost" onClick={() => nav("/variables")}>
-          변수 다시 고르기
+          변수 변경
         </button>
       </div>
 
@@ -55,7 +55,7 @@ export default function RegionSetup() {
             <label className="field-label" htmlFor="region-search">
               산지
             </label>
-            <input id="region-search" className="search" placeholder="산지 이름 검색 (예: 나파, 영동)" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input id="region-search" className="search" placeholder="산지 검색" value={q} onChange={(e) => setQ(e.target.value)} />
             <div className="region-list">
               {filtered.map((r) => (
                 <button key={r.id} className={`region-item ${r.id === sel.region ? "sel" : ""}`} aria-pressed={r.id === sel.region} onClick={() => set({ region: r.id })}>
@@ -66,7 +66,7 @@ export default function RegionSetup() {
                   </span>
                 </button>
               ))}
-              {filtered.length === 0 && <span className="muted small">찾는 산지가 없어요. 지금은 기본 산지 7곳만 지원합니다.</span>}
+              {filtered.length === 0 && <span className="muted small">검색 결과 없음</span>}
             </div>
             {region && <p className="muted small" style={{ marginTop: 8 }}>{region.blurb}</p>}
           </div>
@@ -100,14 +100,14 @@ export default function RegionSetup() {
                   {v!.name}: {v!.dataset} {v!.start_year}~ {v!.start_year > sel.start ? `(${v!.start_year}년부터 분석)` : ""}
                 </span>
               ))}
-              {latestStart > sel.start && <span>변수마다 데이터 시작 연도가 달라 자동으로 맞춥니다.</span>}
+              {latestStart > sel.start && <span>변수별 데이터 시작 연도에 맞춰 자동 조정</span>}
             </div>
           </div>
 
           <details>
-            <summary>(선택) 우리 밭의 생육 단계 날짜</summary>
+            <summary>생육 단계 날짜 (선택)</summary>
             <p className="muted small" style={{ margin: "8px 0" }}>
-              비워 두면 산지 기본값을 씁니다{region ? ` (${region.name}: 발아 ${region.stages.budburst}, 수확 ${region.stages.harvest})` : ""}.
+              미입력 시 산지 기본값{region ? ` (${region.name}: 발아 ${region.stages.budburst}, 수확 ${region.stages.harvest})` : ""}
             </p>
             <div className="stage-grid">
               {STAGES.map((k) => (
@@ -124,10 +124,10 @@ export default function RegionSetup() {
             </div>
           </details>
 
-          <div className="note-line">결과는 산지 단위(수십 km)이며 밭 하나를 대표하지 않습니다.</div>
+          <div className="note-line">산지 단위(수십 km) 평균값. 개별 밭과 다를 수 있음.</div>
 
           <button className="btn btn-primary btn-lg" disabled={!sel.region} onClick={go}>
-            {sel.region ? "분석하기" : "산지를 먼저 고르세요"}
+            {sel.region ? "분석 시작" : "산지를 선택하세요"}
           </button>
         </div>
       </div>

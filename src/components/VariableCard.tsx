@@ -27,7 +27,7 @@ export default function VariableCard({ v, category, inBasket, onToggle }: Props)
       <span className="popover" role="tooltip">
         <h4>{v.name}</h4>
         {v.sections.definition}
-        <span className="lbl">왜 중요한가</span>
+        <span className="lbl">의미</span>
         {v.sections.why}
         <dl>
           <dt>단위</dt>

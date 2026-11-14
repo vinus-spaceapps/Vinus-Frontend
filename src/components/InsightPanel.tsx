@@ -18,13 +18,13 @@ interface Props {
   onClose: () => void;
 }
 
-const EXAMPLES = ["2020년 하나 때문에 나온 결과야?", "신뢰구간이 무슨 뜻이야?", "우리 밭에도 해당될까?", "다른 산지랑 비교하면 어때?"];
+const EXAMPLES = ["2020년 영향", "신뢰구간 뜻", "우리 밭 적용 여부", "다른 산지와 비교"];
 
 const CELLS: { key: keyof InsightCard; title: string }[] = [
   { key: "summary", title: "한 줄 요약" },
-  { key: "numbers", title: "숫자로 보면" },
-  { key: "confidence", title: "얼마나 믿을 수 있나" },
-  { key: "meaning", title: "생산자에게 의미" },
+  { key: "numbers", title: "수치" },
+  { key: "confidence", title: "신뢰도" },
+  { key: "meaning", title: "생산자 관점" },
 ];
 
 function SourceBadge({ source, unverified }: { source: string; unverified: string[] }) {
@@ -85,11 +85,11 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
   return (
     <ChatPanel
       title="인사이트 AI"
-      subtitle={aiEnabled ? "계산된 결과만 읽고 쉬운 말로 풀어 드려요" : "AI 꺼짐, 규칙 기반으로 요약해요"}
+      subtitle={aiEnabled ? "통계 결과 해설" : "AI 꺼짐, 규칙 기반 요약"}
       onClose={onClose}
       onSend={ask}
       busy={busy}
-      placeholder="예: 2020년 하나 때문에 나온 결과야?"
+      placeholder="질문 입력"
       scrollKey={items.length}
       footer={
         (vars.length > 1 || items.length > 0) && (
@@ -115,9 +115,9 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
       {items.length === 0 && !busy && (
         <div className="ai-empty">
           <p className="muted small">
-            지금 그래프와 판정을 생산자 관점에서 풀어 드려요.
+            현재 그래프와 판정 결과 해설
             <br />
-            숫자는 통계 엔진이 계산한 값만 씁니다.
+            통계 엔진이 계산한 수치만 사용
           </p>
           <button className="btn btn-primary" onClick={() => requestCard(decision)}>
             ✦ 인사이트 줘
@@ -133,7 +133,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
       )}
       {items.map((it, i) => {
         if (it.kind === "user") return <div key={i} className="msg user">{it.text}</div>;
-        if (it.kind === "error") return <div key={i} className="msg assistant">답변을 가져오지 못했어요. {it.text}</div>;
+        if (it.kind === "error") return <div key={i} className="msg assistant">응답을 받을 수 없습니다. {it.text}</div>;
         if (it.kind === "ask")
           return (
             <div key={i} className="msg assistant">
@@ -170,7 +170,7 @@ export default function InsightPanel({ query, vars, aiEnabled, onApply, onClose 
             ))}
             {it.card.next_steps.length > 0 && (
               <div className="insight-cell">
-                <h4>다음에 확인해 볼 것</h4>
+                <h4>추가 확인</h4>
                 <div className="next-steps">
                   {it.card.next_steps.map((s) => (
                     <button key={s.label} onClick={() => onApply(s.change, activeVar!)}>

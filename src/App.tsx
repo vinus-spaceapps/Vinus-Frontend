@@ -13,9 +13,9 @@ function Header() {
   const { sel } = useSelection();
   const theme = useTheme();
   const steps = [
-    { to: "/variables", n: 1, label: "변수 고르기", enabled: true },
-    { to: "/region", n: 2, label: "지역 설정", enabled: sel.basket.length > 0 },
-    { to: "/analyze", n: 3, label: "분석", enabled: pathname === "/analyze" },
+    { to: "/variables", n: 1, label: "변수 선택", enabled: true },
+    { to: "/region", n: 2, label: "지역·기간", enabled: sel.basket.length > 0 },
+    { to: "/analyze", n: 3, label: "분석 결과", enabled: pathname === "/analyze" },
   ];
   return (
     <header className="header">
@@ -43,7 +43,7 @@ function Header() {
         )}
         {health && (
           <span className={`badge ${health.ai.enabled ? "" : "warn"}`} title={health.ai.enabled ? health.ai.model : health.ai.reason}>
-            AI {health.ai.enabled ? "켜짐" : "꺼짐 (규칙 기반)"}
+            AI {health.ai.enabled ? "켜짐" : "꺼짐"}
           </span>
         )}
         <div className="seg theme-seg" role="group" aria-label="화면 테마">
@@ -67,7 +67,7 @@ export default function App() {
       {error ? (
         <div className="container page">
           <div className="error-box">
-            <b>데이터를 불러오지 못했어요.</b> {error}
+            <b>데이터를 불러올 수 없습니다.</b> {error}
           </div>
         </div>
       ) : loading ? (
