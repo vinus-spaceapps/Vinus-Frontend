@@ -1,50 +1,66 @@
-import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
-import Icon, { type IconName } from "./components/Icon";
+import type { CSSProperties } from "react";
+import { Link, Route, Routes, useLocation } from "react-router-dom";
+import Icon from "./components/Icon";
 import { useCatalog } from "./lib/catalog";
-import { useSelection } from "./lib/selection";
+import { toSearch, useSelection } from "./lib/selection";
 import Landing from "./pages/Landing";
 import VariablePicker from "./pages/VariablePicker";
 import RegionSetup from "./pages/RegionSetup";
 import Analysis from "./pages/Analysis";
-import { setTheme, useTheme } from "./theme";
 
-// 왼쪽 아이콘 레일: 로고, 진행 단계, 테마. 선택된 칸 = 진한 원.
+const STEP_PATHS = ["/variables", "/region", "/analyze"];
+
+// 왼쪽 레일: 로고·처음은 따로, 1→2→3 단계는 한 캡슐 안에서 선으로 이어진 진행 표시.
+// 지나온 단계는 와인색 체크, 지금 단계는 진한 원, 아직 못 가는 단계는 흐리게.
 function Rail() {
   const { pathname } = useLocation();
   const { sel } = useSelection();
-  const theme = useTheme();
-  const items: { to: string; label: string; icon: IconName; enabled: boolean }[] = [
-    { to: "/", label: "처음", icon: "home", enabled: true },
-    { to: "/variables", label: "1 변수 선택", icon: "layers", enabled: true },
-    { to: "/region", label: "2 지역·기간", icon: "pin", enabled: sel.basket.length > 0 },
-    { to: "/analyze", label: "3 분석 결과", icon: "chart", enabled: pathname === "/analyze" },
+  const cur = STEP_PATHS.indexOf(pathname);
+  const canAnalyze = sel.basket.length > 0 && !!sel.region;
+  const steps = [
+    { to: "/variables", label: "변수", enabled: true },
+    { to: "/region", label: "지역·기간", enabled: sel.basket.length > 0 },
+    {
+      to: canAnalyze ? `/analyze${toSearch({ variables: sel.basket, region: sel.region!, start: sel.start, end: sel.end, thresholds: {} })}` : "/analyze",
+      label: "결과",
+      enabled: pathname === "/analyze" || canAnalyze,
+    },
   ];
   return (
     <aside className="rail">
       <Link to="/" className="rail-logo" aria-label="Vinus 처음 화면">
         <img src="/logo.svg" width={40} height={28} alt="" />
       </Link>
-      <nav className="rail-nav" aria-label="진행 단계">
-        {items.map((it) =>
-          it.enabled ? (
-            <NavLink key={it.to} to={it.to} end className="rail-btn" aria-label={it.label}>
-              <Icon name={it.icon} />
-              <span className="rail-tip">{it.label}</span>
-            </NavLink>
-          ) : (
-            <span key={it.to} className="rail-btn" aria-disabled="true" aria-label={`${it.label} (이전 단계를 먼저 완료)`}>
-              <Icon name={it.icon} />
-              <span className="rail-tip">{it.label}</span>
-            </span>
-          ),
-        )}
+      <Link to="/" className="rail-home" {...(pathname === "/" ? { "aria-current": "page" } : {})}>
+        <span className="rail-home-ic">
+          <Icon name="home" size={18} />
+        </span>
+        <span className="step-label">처음</span>
+      </Link>
+      <nav className="stepper" aria-label="진행 단계" style={{ "--reached": cur } as CSSProperties}>
+        <ol>
+          {steps.map((s, i) => {
+            const state = i === cur ? "current" : i < cur ? "done" : s.enabled ? "open" : "locked";
+            const mark = state === "done" ? <Icon name="check" size={16} /> : <span className="num">{i + 1}</span>;
+            return (
+              <li key={s.label} data-state={state} {...(i < cur ? { "data-reached": "" } : {})}>
+                {s.enabled ? (
+                  <Link to={s.to} className="step-node" aria-label={`${i + 1}단계 ${s.label}`} {...(i === cur ? { "aria-current": "step" } : {})}>
+                    {mark}
+                  </Link>
+                ) : (
+                  <span className="step-node" aria-disabled="true" aria-label={`${i + 1}단계 ${s.label}, 앞 단계를 먼저 마치세요`}>
+                    {mark}
+                  </span>
+                )}
+                <span className="step-label" aria-hidden>
+                  {s.label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
       </nav>
-      <div className="rail-end">
-        <button className="rail-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "라이트 테마로" : "다크 테마로"}>
-          <Icon name={theme === "dark" ? "sun" : "moon"} />
-          <span className="rail-tip">{theme === "dark" ? "라이트 테마" : "다크 테마"}</span>
-        </button>
-      </div>
     </aside>
   );
 }

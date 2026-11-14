@@ -1,65 +1,47 @@
-/* Vinus: 대시보드 레퍼런스 기반.
-   옅은 민트 바탕 + 은은한 빛 번짐, 흰 카드(큰 라운드), 동그란 아이콘 버튼, 선택 = 진한 원/알약.
-   색은 데이터에만: 초록(좋아짐)·주황(엇갈림)·빨강(나빠짐)·회색(뚜렷하지 않음). 글꼴은 Pretendard 하나. */
+/* Vinus: 대시보드 레퍼런스 기반, 라이트 하나.
+   연한 와인빛 바탕(블러시) + 은은한 로제 빛 번짐, 흰 카드(큰 라운드), 동그란 아이콘 버튼.
+   글자·선택 = 와인 잉크(아주 짙은 와인빛 검정). 와인색 강조는 단계 진행·완료·초점에만 아껴 씀.
+   데이터 색: 초록(좋아짐)·주황(엇갈림)·빨강(나빠짐)·회색(뚜렷하지 않음). 글꼴은 Pretendard 하나. */
 :root {
-  --bg-rgb: 238 243 243;
-  --fg-rgb: 18 21 23;
+  --bg-rgb: 247 241 242;       /* Blush */
+  --fg-rgb: 36 22 28;          /* Wine ink */
   --bg: rgb(var(--bg-rgb));
   --fg: rgb(var(--fg-rgb));
-  --muted: rgb(var(--fg-rgb) / .52);
+  --muted: rgb(var(--fg-rgb) / .55);
   --faint: rgb(var(--fg-rgb) / .34);
   --line: rgb(var(--fg-rgb) / .08);
   --hover: rgb(var(--fg-rgb) / .05);
-  --card: rgb(255 255 255 / .78);
+  --wine: #8c3b55;
+  --wine-soft: #f2e2e8;
+  --card: rgb(255 255 255 / .82);
   --card-solid: #fff;
-  --card-line: rgb(255 255 255 / .75);
-  --chip: #e4ecec;
+  --card-line: rgb(255 255 255 / .8);
+  --chip: #f1e6ea;
   --pill: #fff;
   --raise: #fff;
   --popover: #fff;
-  --glass: rgb(255 255 255 / .8);
+  --glass: rgb(255 255 255 / .82);
   --glass-line: rgb(var(--fg-rgb) / .06);
-  --blob-a: rgb(165 212 210 / .6);
-  --blob-b: rgb(214 232 228 / .85);
-  --tip-bg: rgb(18 21 23 / .92);
+  --blob-a: rgb(222 180 196 / .55);   /* Rosé */
+  --blob-b: rgb(240 222 229 / .9);
+  --tip-bg: rgb(36 22 28 / .93);
   --tip-fg: #fff;
-  --tip-good: #8ef06c;
-  --good: #6fd145;
-  --mid: #f2a13a;
-  --bad: #e5432d;
-  --none: #a7b4b7;
-  --cool: #4a90d9;
-  --shadow: 0 1px 1px rgb(20 40 40 / .03), 0 10px 30px rgb(20 40 40 / .06);
-  --shadow-sm: 0 1px 2px rgb(20 40 40 / .06), 0 4px 12px rgb(20 40 40 / .05);
+  --tip-good: #ffd0dc;
+  --good: #5fc43a;
+  --mid: #f09a33;
+  --bad: #e2412b;
+  --none: #b6a7ad;
+  --cool: #4a86d0;
+  --shadow: 0 1px 1px rgb(70 20 40 / .03), 0 10px 30px rgb(70 20 40 / .07);
+  --shadow-sm: 0 1px 2px rgb(70 20 40 / .06), 0 4px 12px rgb(70 20 40 / .05);
   --font: Pretendard, "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --r-card: 24px;
   --r: 14px;
   color-scheme: light;
 }
-:root[data-theme="dark"] {
-  --bg-rgb: 14 19 20;
-  --fg-rgb: 234 240 240;
-  --card: rgb(27 33 35 / .82);
-  --card-solid: #1b2123;
-  --card-line: rgb(255 255 255 / .05);
-  --chip: rgb(255 255 255 / .08);
-  --pill: rgb(255 255 255 / .07);
-  --raise: #1b2123;
-  --popover: #1f2628;
-  --glass: rgb(27 33 35 / .85);
-  --glass-line: rgb(255 255 255 / .08);
-  --blob-a: rgb(34 92 88 / .45);
-  --blob-b: rgb(32 52 54 / .6);
-  --tip-bg: rgb(238 243 243 / .96);
-  --tip-fg: #121517;
-  --tip-good: #2b8a10;
-  --none: #66767a;
-  --shadow: 0 1px 1px rgb(0 0 0 / .25), 0 10px 30px rgb(0 0 0 / .3);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / .3), 0 4px 12px rgb(0 0 0 / .2);
-  color-scheme: dark;
-}
-@media (prefers-contrast: more) { :root, :root[data-theme] { --muted: rgb(var(--fg-rgb) / .8); --line: rgb(var(--fg-rgb) / .3); } }
+@media (prefers-contrast: more) { :root { --muted: rgb(var(--fg-rgb) / .8); --line: rgb(var(--fg-rgb) / .3); } }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -76,7 +58,7 @@ p { margin: 0; }
 .small { font-size: 13px; }
 .label { font-size: 12px; font-weight: 500; color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--wine); outline-offset: 2px; }
 .icon { display: block; flex: none; }
 
 /* ---------- 기본 조각 ---------- */
@@ -137,19 +119,39 @@ select, input[type="text"], input:not([type]), input[type="search"] { background
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- 앱 틀: 왼쪽 아이콘 레일 + 본문 ---------- */
-.shell { display: grid; grid-template-columns: 84px minmax(0, 1fr); min-height: 100vh; }
-.rail { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 1000; }
+.shell { display: grid; grid-template-columns: 96px minmax(0, 1fr); min-height: 100vh; }
+.rail { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 0; z-index: 1000; }
 .rail-logo { display: grid; place-items: center; width: 48px; height: 40px; border-radius: 12px; }
-:root[data-theme="light"] .rail-logo img, :root:not([data-theme]) .rail-logo img { filter: invert(1); }
-.rail-nav { display: flex; flex-direction: column; gap: 12px; margin-top: 64px; }
-.rail-end { margin-top: auto; }
-.rail-btn { position: relative; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--pill); color: var(--fg); box-shadow: var(--shadow-sm); cursor: pointer; text-decoration: none; transition: transform 100ms var(--ease-out), background-color 150ms ease, color 150ms ease; }
-.rail-btn:active { transform: scale(0.94); }
-.rail-btn.active { background: var(--fg); color: var(--bg); box-shadow: none; }
-.rail-btn[aria-disabled="true"] { opacity: .35; cursor: not-allowed; box-shadow: none; }
-.rail-tip { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%) scale(0.97); transform-origin: left center; padding: 4px 10px; border-radius: 8px; background: var(--tip-bg); color: var(--tip-fg); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 125ms var(--ease-out), transform 125ms var(--ease-out); }
-.rail-btn:focus-visible .rail-tip { opacity: 1; transform: translateY(-50%); }
-@media (hover: hover) and (pointer: fine) { .rail-btn:hover .rail-tip { opacity: 1; transform: translateY(-50%); } .rail-btn:not(.active):not([aria-disabled="true"]):hover { background: var(--chip); } }
+.rail-logo img { filter: invert(1) sepia(1) saturate(2.2) hue-rotate(295deg) brightness(.42); } /* 흰 로고 → 와인 잉크 */
+.step-label { font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--muted); white-space: nowrap; transition: color 150ms ease; }
+/* 처음: 단계와 따로 떨어진 작은 링크 */
+.rail-home { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 5px; text-decoration: none; }
+.rail-home-ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); transition: background-color 150ms ease, color 150ms ease, transform 100ms var(--ease-out); }
+.rail-home:active .rail-home-ic { transform: scale(0.94); }
+.rail-home[aria-current] .rail-home-ic { background: var(--fg); color: #fff; }
+.rail-home[aria-current] .step-label { color: var(--fg); }
+/* 단계: 한 캡슐 안 1→2→3, 사이를 짧은 선으로 잇고 지나온 구간은 와인색으로 채움 */
+.stepper { padding: 12px 8px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--card-line); box-shadow: var(--shadow); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.stepper ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+.stepper li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding-bottom: 26px; }
+.stepper li:last-child { padding-bottom: 0; }
+.stepper li:not(:last-child)::before, .stepper li:not(:last-child)::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 2px; height: 18px; margin-left: -1px; border-radius: 1px; }
+.stepper li:not(:last-child)::before { background: var(--line); }
+.stepper li:not(:last-child)::after { background: var(--wine); transform: scaleY(0); transform-origin: top; transition: transform 280ms var(--ease-in-out); }
+.stepper li[data-reached]::after { transform: scaleY(1); }
+.step-node { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--card-solid); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; text-decoration: none; transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 100ms var(--ease-out); }
+a.step-node:active { transform: scale(0.94); }
+.stepper li[data-state="current"] .step-node { background: var(--fg); color: #fff; box-shadow: 0 0 0 4px var(--wine-soft); }
+.stepper li[data-state="current"] .step-label { color: var(--fg); }
+.stepper li[data-state="done"] .step-node { background: var(--wine-soft); color: var(--wine); box-shadow: none; }
+.stepper li[data-state="done"] .step-label { color: var(--wine); }
+.stepper li[data-state="locked"] .step-node { color: var(--faint); cursor: not-allowed; box-shadow: inset 0 0 0 1.5px var(--line); background: transparent; }
+.stepper li[data-state="locked"] .step-label { color: var(--faint); }
+@media (hover: hover) and (pointer: fine) {
+  .stepper li[data-state="open"] a.step-node:hover { background: var(--chip); color: var(--fg); }
+  .stepper li[data-state="done"] a.step-node:hover { background: #ead2db; }
+  .rail-home:not([aria-current]):hover .rail-home-ic { background: var(--chip); color: var(--fg); }
+}
 .shell-main { min-width: 0; padding: 28px 32px 56px 8px; }
 .page { max-width: 1440px; }
 
@@ -225,6 +227,7 @@ select, input[type="text"], input:not([type]), input[type="search"] { background
 .map-frame { position: relative; height: 300px; isolation: isolate; border-radius: 16px; overflow: hidden; }
 .map-frame .leaflet-container, .map-box .leaflet-container { height: 100%; width: 100%; background: transparent; font-family: inherit; }
 .leaflet-container { background: transparent; font-family: inherit; }
+.leaflet-tile-pane { filter: sepia(.2) hue-rotate(-30deg) saturate(.9); }
 .leaflet-control-attribution { background: rgb(var(--bg-rgb) / .7) !important; color: var(--faint) !important; border-radius: 8px 0 0 0; font-size: 10px; }
 .leaflet-control-attribution a { color: var(--faint) !important; }
 .map-tools { position: absolute; z-index: 800; left: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; }
@@ -244,7 +247,7 @@ select, input[type="text"], input:not([type]), input[type="search"] { background
 .heat-tip { position: absolute; left: 22px; bottom: 14px; display: flex; flex-direction: column; gap: 2px; min-width: 128px; padding: 10px 14px; border-radius: 14px; background: var(--tip-bg); color: var(--tip-fg); white-space: nowrap; pointer-events: none; box-shadow: 0 12px 30px rgb(0 0 0 / .2);
   opacity: 0; transform: translateY(4px) scale(0.97); transform-origin: bottom left; transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out); }
 .heat-tip b { font-size: 13px; font-weight: 600; }
-.heat-tip em { font-style: normal; font-size: 16px; font-weight: 700; color: var(--tip-good); font-variant-numeric: tabular-nums; }
+.heat-tip em { font-style: normal; font-size: 16px; font-weight: 700; color: color-mix(in srgb, var(--tone) 80%, #fff); font-variant-numeric: tabular-nums; }
 .heat-tip small { font-size: 11px; opacity: .7; }
 .heat[data-sel] .heat-tip, .heat-icon:focus-visible .heat-tip { opacity: 1; transform: none; }
 .heat-icon:focus-visible { outline: none; }
@@ -388,7 +391,7 @@ select, input[type="text"], input:not([type]), input[type="search"] { background
 .popover dt { color: var(--muted); }
 .popover dd { margin: 0; }
 /* 아래에 떠 있는 바구니 바. sticky 라 끝까지 내리면 그리드 아래 제자리로 */
-.basket { position: sticky; bottom: 16px; margin-top: 24px; padding: 8px 8px 8px 18px; border-radius: 999px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; z-index: 20; }
+.basket { position: sticky; bottom: 16px; margin-top: 24px; padding: 8px 8px 8px 18px; border-radius: 28px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; z-index: 20; }
 .basket .lbl { font-weight: 600; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .basket .spacer { flex: 1; }
@@ -439,14 +442,21 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
   .dash { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
-  /* 레일은 위쪽 가로 막대로 */
+  /* 레일은 위쪽 가로 막대로: 단계는 가로 캡슐, 사이 선도 가로 */
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .rail { flex-direction: row; height: auto; padding: 10px 16px; gap: 8px; background: rgb(var(--bg-rgb) / .8); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-  .rail-nav { flex-direction: row; margin: 0 0 0 auto; gap: 8px; }
-  .rail-end { margin: 0 0 0 8px; }
-  .rail-btn { width: 40px; height: 40px; }
-  .rail-tip { display: none; }
-  .shell-main { padding: 16px 16px 48px; }
+  .rail { flex-direction: row; height: auto; gap: 10px; padding: 10px 16px; background: rgb(var(--bg-rgb) / .85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  .rail-home { margin: 0 0 0 auto; }
+  .rail-home .step-label, .stepper .step-label { display: none; }
+  .stepper { padding: 5px 6px; }
+  .stepper ol { flex-direction: row; }
+  .stepper li { flex-direction: row; padding: 0 20px 0 0; }
+  .stepper li:not(:last-child)::before, .stepper li:not(:last-child)::after { left: auto; right: 4px; bottom: auto; top: 50%; width: 12px; height: 2px; margin: -1px 0 0; }
+  .stepper li:not(:last-child)::after { transform: scaleX(0); transform-origin: left; }
+  .stepper li[data-reached]::after { transform: scaleX(1); }
+  .step-node { width: 34px; height: 34px; font-size: 13px; }
+  .shell-main { padding: 16px 16px 88px; }
+  /* 좁은 화면: 바구니는 여러 줄이 되므로 떠 있지 않고 그리드 아래 제자리에 (AI 버튼과 겹치지 않게) */
+  .basket { position: static; padding: 14px 14px 14px 18px; }
   .page-head h1, .page-title h1 { font-size: 32px; }
   .hero h1 { font-size: 36px; }
   .kpi-cluster { gap: 16px 28px; }
@@ -459,7 +469,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dash > .card, .detail-grid > .card, .stream svg, .trend .recharts-wrapper, .menu-pop { animation: none; }
-  .gauge-fill { transition: none; }
+  .gauge-fill, .stepper li::after { transition: none; }
   .msg, .insight { transition: opacity 200ms ease; }
   @starting-style { .msg, .insight { transform: none; } }
   .popover, .var-card:hover .popover { transition: opacity 150ms ease, display 150ms allow-discrete; transform: none; }

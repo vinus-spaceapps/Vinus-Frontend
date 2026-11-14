@@ -2,7 +2,6 @@ import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Region, RegionComparison, Variable } from "../lib/types";
-import { useTheme } from "../theme";
 import { TONE_TEXT, TONE_VAR, toneOf, type Tone } from "../tone";
 import Icon from "./Icon";
 
@@ -19,7 +18,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 
 // 산지 하나 = 번진 열 자국(데이터 색) + 가운데 점. 선택된 산지에는 어두운 말풍선 카드.
 function heatIcon(tone: Tone | null, sel: boolean, name: string, value: string | null, sub: string) {
-  const color = tone ? TONE_VAR[tone] : sel ? "var(--fg)" : "var(--none)";
+  const color = tone ? TONE_VAR[tone] : sel ? "var(--wine)" : "var(--none)";
   return L.divIcon({
     className: "heat-icon",
     html:
@@ -79,7 +78,6 @@ function MapTools({ regions }: { regions: Region[] }) {
 
 export default function RegionMap({ regions, selected, onSelect, comparison, unit, higherIs = "worse" }: Props) {
   const sel = regions.find((r) => r.id === selected);
-  const theme = useTheme();
   // 아이콘을 매 렌더마다 새로 만들면 Leaflet 이 DOM 을 갈아 끼우므로 고정
   const icons = useMemo(
     () =>
@@ -98,9 +96,8 @@ export default function RegionMap({ regions, selected, onSelect, comparison, uni
     <>
       <MapContainer center={sel ? [sel.lat, sel.lon] : [30, 10]} zoom={sel ? 4 : 2} minZoom={2} worldCopyJump scrollWheelZoom={false} zoomControl={false}>
         <TileLayer
-          // CARTO 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 그레이 베이스맵 (테마에 맞춰 다크/라이트)
-          key={theme}
-          url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${theme === "light" ? "Light" : "Dark"}_Gray_Base/MapServer/tile/{z}/{y}/{x}`}
+          // CARTO 타일은 이제 API 키가 필요해서, 키 없이 쓰는 Esri 라이트 그레이 베이스맵 (CSS 로 살짝 와인빛)
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
           attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
           maxZoom={12}
         />
